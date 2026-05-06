@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NHI_ĐỒNG_1</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <!-- JSRSAsign for JWT -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsrsasign/10.5.27/jsrsasign-all-min.js"></script>
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        background: '#ffffff',
+                        card: '#ffffff',
+                        border: '#e2e8f0',
+                        primary: { DEFAULT: '#2563eb', foreground: '#ffffff' },
+                        muted: { DEFAULT: '#f1f5f9', foreground: '#64748b' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* CSS Thuần để dự phòng nếu Tailwind lỗi */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            margin: 0;
+            padding: 0;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .flex {
+            display: flex !important;
+        }
+
+        .h-screen {
+            height: 100vh !important;
+        }
+
+        .inset-0 {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+        }
+
+        /* Đăng nhập */
+        .z-login {
+            z-index: 100;
+        }
+
+        .bg-login-bg {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        }
+
+        .login-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+
+        .flex-center {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(37, 99, 235, 0.1);
+            border-left-color: #2563eb;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Sidebar Responsive */
+        #sidebar {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            z-index: 50;
+        }
+
+        @media (max-width: 768px) {
+            #sidebar {
+                position: fixed;
+                top: 0;
+                bottom: 0;
+                left: 0;
+                transform: translateX(-100%);
+                width: 280px !important;
+            }
+
+            #sidebar.mobile-open {
+                transform: translateX(0);
+                box-shadow: 10px 0 15px -3px rgba(0, 0, 0, 0.1);
+            }
+
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(15, 23, 42, 0.4);
+                backdrop-filter: blur(2px);
+                z-index: 40;
+                opacity: 0;
+                transition: opacity 0.3s;
+            }
+
+            .sidebar-overlay.active {
+                display: block;
+                opacity: 1;
+            }
+        }
+
+        @media (min-width: 769px) {
+            #sidebar.collapsed {
+                width: 80px;
+            }
+
+            #sidebar:not(.collapsed) {
+                width: 280px;
+            }
+        }
+
+        .sidebar-text {
+            transition: opacity 0.2s;
+            margin-left: 0.75rem;
+            white-space: nowrap;
+        }
+
+        .collapsed .sidebar-text {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 0.875rem 1.25rem;
+            color: #64748b;
+            border-radius: 0.75rem;
+            width: calc(100% - 1rem);
+            margin: 0 0.5rem;
+            text-align: left;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .nav-item:hover {
+            background-color: #f1f5f9;
+            color: #1e293b;
+        }
+
+        .nav-item.active {
+            background-color: #eff6ff;
+            color: #2563eb;
+            font-weight: 600;
+        }
+
+        .nav-item.active svg {
+            color: #2563eb;
+        }
+
+        /* User Menu Dropdown Styles */
+        #userMenuDropdown {
+            transform-origin: top right;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #userMenuDropdown.hidden {
+            opacity: 0;
+            transform: scale(0.95);
+            pointer-events: none;
+            display: block !important;
+        }
+
+        .user-menu-item {
+            display: flex;
+            align-items: center;
+            padding: 0.625rem 1rem;
+            width: 100%;
+            border-radius: 0.5rem;
+            color: #475569;
+            font-size: 0.875rem;
+            transition: all 0.15s;
+            font-weight: 500;
+        }
+
+        .user-menu-item:hover {
+            background-color: #f8fafc;
+            color: #0f172a;
+        }
+
+        .user-menu-item svg {
+            width: 1.25rem;
+            height: 1.25rem;
+            margin-right: 0.75rem;
+            flex-shrink: 0;
+            color: #64748b;
+            transition: color 0.15s;
+        }
+
+        .user-menu-item:hover svg {
+            color: #0f172a;
+        }
+
+        .user-menu-item.logout {
+            color: #dc2626;
+        }
+
+        .user-menu-item.logout:hover {
+            background-color: #fef2f2;
+            color: #b91c1c;
+        }
+
+        .user-menu-item.logout:hover svg {
+            color: #b91c1c;
+        }
+
+        /* Smooth inputs */
+        input,
+        select,
+        textarea,
+        button {
+            transition: all 0.2s ease-in-out;
+        }
+    </style>
+</head>
+
+<body class="antialiased">
+
+    <!-- Màn hình đăng nhập (Mặc định hiện) -->
+    <div id="loginScreen" class="inset-0 z-login flex-center bg-login-bg">
+        <div
+            class="login-card p-8 md:p-10 rounded-[2rem] shadow-2xl shadow-blue-900/10 w-full max-w-sm border border-white mx-4 relative overflow-hidden">
+            <div class="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-blue-500 to-indigo-500"></div>
+            <div class="flex justify-center mb-8">
+                <div
+                    class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 tracking-tight">
+                    Nhi đồng 1</div>
+            </div>
+            <!-- Loading Indicator -->
+            <div id="loginLoading" class="hidden text-center py-6">
+                <div class="spinner"></div>
+                <p class="text-sm text-slate-500 font-medium">Đang tải dữ liệu nhân viên...</p>
+            </div>
+            <!-- Form Đăng nhập -->
+            <div id="loginForm" class="space-y-5">
+                <div>
+                    <label class="block text-sm font-semibold mb-2 text-slate-700">Tài khoản</label>
+                    <input type="text" id="usernameInput"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white"
+                        placeholder="Mã ID nhân viên">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-2 text-slate-700">Mật khẩu</label>
+                    <input type="password" id="passwordInput"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white"
+                        placeholder="••••••••" onkeydown="if(event.key==='Enter') handleLogin()">
+                </div>
+                <div class="pt-2">
+                    <button onclick="handleLogin()"
+                        class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-lg py-3.5 rounded-xl hover:from-blue-700 hover:to-indigo-700 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all active:translate-y-0">Đăng
+                        nhập</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Màn hình chính (Mặc định ẩn) -->
+    <div id="mainApp" class="hidden flex h-screen bg-slate-50 text-slate-900">
+
+        <!-- Sidebar Overlay (Mobile) -->
+        <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+        <!-- Sidebar -->
+        <aside id="sidebar" class="bg-white border-r border-slate-200 flex flex-col h-full z-40 shadow-sm shrink-0">
+            <div class="h-16 flex items-center justify-between px-5 shrink-0 border-b border-slate-100">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center shrink-0 shadow-sm">
+                        <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" />
+                        </svg>
+                    </div>
+                    <div class="sidebar-text font-black text-slate-800 text-lg tracking-tight">Nhi đồng 1</div>
+                </div>
+                <button onclick="toggleSidebar()"
+                    class="p-2 hover:bg-slate-100 rounded-xl text-slate-400 transition hidden md:block">
+                    <svg id="toggleIcon" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                    </svg>
+                </button>
+            </div>
+            <nav class="flex-1 overflow-y-auto py-4 space-y-1">
+                <button class="nav-item active">
+                    <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                    <span class="sidebar-text">Trang chủ</span>
+                </button>
+            </nav>
+            <div class="p-4 border-t border-slate-100 sidebar-text">
+                <div class="text-[10px] text-slate-400 uppercase tracking-widest font-bold text-center w-full">Version
+                    2.0</div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+            <header
+                class="h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-4 md:px-6 shrink-0 z-30 sticky top-0">
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleSidebar()"
+                        class="p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-xl transition md:hidden">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+                    <h1 class="text-lg font-bold text-slate-800">Cổng thông tin</h1>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <!-- Notifications -->
+                    <button
+                        class="relative p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700 rounded-full transition">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                        </svg>
+                        <span
+                            class="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-white">4</span>
+                    </button>
+
+                    <!-- User Profile Trigger -->
+                    <div class="relative">
+                        <button onclick="toggleUserMenu()" id="userMenuButton"
+                            class="flex items-center gap-2.5 p-1 pl-2 hover:bg-slate-100 rounded-full transition border border-transparent hover:border-slate-200">
+                            <div id="userProfileInfo" class="flex flex-col items-end leading-tight mr-1 hidden sm:flex">
+                                <span id="userNameHeader" class="text-sm font-bold text-slate-700">---</span>
+                                <span id="userRoleHeader"
+                                    class="text-[11px] font-semibold text-slate-400 capitalize">---</span>
+                            </div>
+                            <div class="relative items-center flex">
+                                <div id="userAvatar"
+                                    class="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-sm">
+                                    ?</div>
+                                <div
+                                    class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full">
+                                </div>
+                            </div>
+                        </button>
+
+                        <!-- User Menu Dropdown -->
+                        <div id="userMenuDropdown"
+                            class="hidden absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-2xl shadow-xl p-1.5 z-50">
+                            <div class="px-3 py-3 sm:hidden border-b border-slate-100 mb-1">
+                                <div id="userNameHeaderMobile" class="text-sm font-bold text-slate-800">---</div>
+                                <div id="userRoleHeaderMobile"
+                                    class="text-xs font-semibold text-slate-400 capitalize mt-0.5">---</div>
+                            </div>
+                            <button class="user-menu-item">
+                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                                Hồ sơ cá nhân
+                            </button>
+                            <button class="user-menu-item">
+                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37a1.724 1.724 0 002.572-1.065z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                Cài đặt hệ thống
+                            </button>
+                            <button class="user-menu-item">
+                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                                </svg>
+                                Đổi mật khẩu
+                            </button>
+                            <div class="my-1 border-t border-slate-100"></div>
+                            <button onclick="logout()" class="user-menu-item logout">
+                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                </svg>
+                                Đăng xuất
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <main class="flex-1 overflow-y-auto p-4 md:p-8">
+                <div class="max-w-4xl mx-auto pb-10">
+                    <div class="bg-white border border-slate-200/50 p-5 md:p-8 rounded-3xl shadow-sm">
+                        <div class="flex items-center gap-3 mb-6 md:mb-8 pb-4 border-b border-slate-100">
+                            <div
+                                class="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shrink-0">
+                                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                </svg>
+                            </div>
+                            <h2 class="text-xl md:text-2xl font-black text-slate-800 tracking-tight">Ghi nhận Nhiệt độ
+                                Tủ</h2>
+                        </div>
+
+                        <div class="space-y-6 md:space-y-8">
+                            <!-- Row QR -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
+                                <div>
+                                    <label class="block text-sm font-bold mb-2 text-slate-700">ID Tủ (Mã QR) <span
+                                            class="text-red-500">*</span></label>
+                                    <div class="flex gap-2">
+                                        <input type="text" id="input_id_tu" oninput="handleIdTuChange(this.value)"
+                                            class="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white uppercase font-bold"
+                                            placeholder="Nhập hoặc quét mã...">
+                                        <button type="button" onclick="toggleQRScanner()"
+                                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl font-medium transition-all flex items-center justify-center shadow-sm active:scale-95 shrink-0">
+                                            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <input type="hidden" id="input_qr_code">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-bold mb-2 text-slate-700">Tên tủ</label>
+                                    <input type="text" id="input_ten"
+                                        class="w-full bg-slate-100 border border-transparent rounded-xl px-4 py-3 text-slate-600 font-medium cursor-not-allowed"
+                                        readonly placeholder="Tự động điền">
+                                </div>
+                            </div>
+
+                            <div id="qr-scanner-container"
+                                class="hidden my-4 p-4 border border-slate-200 rounded-2xl bg-slate-50/80 shadow-inner">
+                                <div id="reader" class="overflow-hidden rounded-xl border border-slate-200"
+                                    style="width: 100%;"></div>
+                                <div class="mt-4 text-center">
+                                    <button type="button" onclick="stopQRScanner()"
+                                        class="px-5 py-2.5 bg-white border border-red-200 text-red-600 rounded-xl text-sm font-bold hover:bg-red-50 transition-all shadow-sm">Đóng
+                                        máy ảnh</button>
+                                </div>
+                            </div>
+
+                            <!-- Row 2 -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
+                                <div>
+                                    <label class="block text-sm font-bold mb-2 text-slate-700">Vị trí</label>
+                                    <input type="text" id="input_vi_tri"
+                                        class="w-full bg-slate-100 border border-transparent rounded-xl px-4 py-3 text-slate-600 font-medium cursor-not-allowed"
+                                        readonly placeholder="Tự động điền">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-bold mb-2 text-slate-700">Khung giờ</label>
+                                    <div class="relative">
+                                        <select id="input_khung_h"
+                                            class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white appearance-none font-semibold">
+                                            <option value="Sáng">Sáng</option>
+                                            <option value="Chiều">Chiều</option>
+                                        </select>
+                                        <div
+                                            class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
+                                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="h-px w-full bg-slate-100 my-4 md:my-6"></div>
+
+                            <!-- Row 3: Limits -->
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6">
+                                <div>
+                                    <label class="block text-sm font-bold mb-2 text-slate-500">Cảnh báo Dưới
+                                        (°C)</label>
+                                    <input type="text" id="input_nhiet_do_min"
+                                        class="w-full bg-slate-100 border border-transparent rounded-xl px-4 py-3 text-slate-500 text-center font-black cursor-not-allowed text-lg"
+                                        readonly placeholder="--">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-bold mb-2 text-slate-500">Cảnh báo Trên
+                                        (°C)</label>
+                                    <input type="text" id="input_nhiet_do_max"
+                                        class="w-full bg-slate-100 border border-transparent rounded-xl px-4 py-3 text-slate-500 text-center font-black cursor-not-allowed text-lg"
+                                        readonly placeholder="--">
+                                </div>
+                                <div
+                                    class="bg-blue-50/60 p-4 rounded-2xl border border-blue-200 shadow-inner sm:bg-transparent sm:p-0 sm:border-0 sm:shadow-none sm:-m-0 -mx-3">
+                                    <label class="block text-sm font-black mb-2 text-blue-700 tracking-wide">NHIỆT ĐỘ ĐO
+                                        ĐƯỢC <span class="text-red-500">*</span></label>
+                                    <input type="number" step="any" id="input_nhiet_do_do_dc"
+                                        oninput="calculateKetQua()"
+                                        class="w-full bg-white border-2 border-blue-400 rounded-xl px-4 py-3 focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-600 font-black text-blue-700 text-center text-xl shadow-sm placeholder-blue-200 transition-all"
+                                        placeholder="0.0">
+                                </div>
+                            </div>
+
+                            <!-- Row 4 -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
+                                <div>
+                                    <label class="block text-sm font-bold mb-2 text-slate-700">Tình trạng (Tự
+                                        động)</label>
+                                    <input type="text" id="input_ket_qua"
+                                        class="w-full bg-slate-100 border border-transparent rounded-xl px-4 py-3 font-black text-slate-400 text-center text-xl uppercase tracking-wider cursor-not-allowed"
+                                        readonly placeholder="-">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-bold mb-2 text-slate-700">Ghi chú sự cố</label>
+                                    <textarea id="input_ghi_chu" rows="2"
+                                        class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white resize-y"
+                                        placeholder="Ghi nhận sai số, vệ sinh..."></textarea>
+                                </div>
+                            </div>
+
+                            <!-- Signature -->
+                            <div class="pt-2">
+                                <label
+                                    class="block text-sm font-bold mb-3 text-slate-700 flex justify-between items-center">
+                                    <span>Chữ ký nhân viên trực</span>
+                                    <button type="button" onclick="clearSignature()"
+                                        class="text-[11px] font-bold text-slate-500 hover:text-red-600 transition tracking-wide uppercase px-2.5 py-1.5 rounded-lg border border-slate-200 hover:border-red-200 hover:bg-red-50 active:scale-95 bg-white shadow-sm">Ký
+                                        lại</button>
+                                </label>
+                                <div class="border-2 border-slate-300 rounded-2xl bg-slate-50 w-full overflow-hidden relative touch-none group"
+                                    style="height: 180px;">
+                                    <canvas id="signature-pad"
+                                        class="w-full h-full cursor-crosshair touch-none absolute inset-0 z-10"
+                                        style="touch-action: none;"></canvas>
+                                    <!-- Placeholder -->
+                                    <div
+                                        class="absolute inset-0 z-0 pointer-events-none flex flex-col items-center justify-center opacity-30 group-hover:opacity-10 transition">
+                                        <svg class="w-10 h-10 mb-2 text-slate-500" fill="none" viewBox="0 0 24 24"
+                                            stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                        </svg>
+                                        <span class="text-sm font-semibold tracking-wide text-slate-600">Ký vào khoảng
+                                            trống</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="pt-6 mt-4 border-t border-slate-100">
+                                <button type="button" id="btnSubmit" onclick="submitData()"
+                                    class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black py-4.5 rounded-2xl hover:from-blue-700 hover:to-indigo-700 shadow-xl shadow-blue-600/20 hover:shadow-blue-600/40 transition-all active:scale-[0.98] flex justify-center items-center gap-3 text-lg border border-blue-500">
+                                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                            d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    LƯU LÊN HỆ THỐNG
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        // --- LOGIC CONFIG ---
+        const CONFIG = {
+            spreadsheetId: "1vktnQy5rzIGrYN5YE6fVz3YgYi2RalRBlMO__DUv0yc",
+            authSheetName: "DSNV",
+            serviceAccountEmail: "test-gia-ason@api-test-sheet-161.iam.gserviceaccount.com",
+            privateKey: "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC3NN84hLTkQPZd\nLj7niXZTICq7nHsuTn3J6r2Paq12m70/lYSmrwh1i0EStr9bO19QM8cevGlslwGr\nWSVOLJlc6+w1HGPKvRXtA41kYV9MYIvpzIPQtkFE7Hxq71QyBARcv39Lfzze6Ioj\n3G8VBvAKFLAnCUr97GHRv+KbCTFxPZupd3PEB+xS5ZUlzdBCEZvDid3iXaaEJJ+l\nTd1apAGQHjtnDTLOkiTa8zf7X5ebALwnI9MziOdN8VyprHXGhkachPbKyrG0QwEs\n2jtiI6Y5ULsBPjNefoavH8MKU5DEAT9h0fZ7KfsKYVMDuXqmEKBs0D3B4Z6aDZQW\nwT2dDRZDAgMBAAECggEAEIuVoSzZVuFhaz1GI9ji0IacjvO50cIq7M8Zrj4/F756\nEw6PIhKENafAb7U4INm2AnzUMO8CqL9Jpxs85qUM3W4JysSByqLUiRW2184amIyb\nj7jCXfLBTQn8AbHgrUepl5d/vBmFYMgon/mqjbNiGDb4FZgEQSkie5o6fi/dWp5d\nNahbZl+WTOB/znhAfKh/zferHNxldR/ERmwOubZUerkqysWiBigc3ovpLSUof9ur\nz3hNPPp0CKQjF40xuQc6FYTHUHMLuMvp78PXuc/mYqQmZ8VOGhU+faGtZ4m+QJly\ndF5dS8U5cwKEF+ptuAUiWSahn6INb9yKn3+FcsW0UQKBgQDb8N4eWFvbgpRo/vxo\nwBN2u2TWubj6clcrq/1a+VR0njC28Can0ogJHhrFhPxVs5D/rugs3HlbyAXJFptY\nV0DZPCwBxGU5P5RbGjXWWEUXjp4ISKQD8WKfVlXNr79TqLdOg2NZBYQAi06Cpo/T\nPV9l7LSG2Tj/9WdvD7W2wvrpaQKBgQDVPjpJN6xh7+sHtSU0mjKvrqigpHbuSQ/o\nXpUaWSIpJffm5QpFPAOcTT5mHZCyllicJQIrfPSY+sH8n+sF03CUqVkV4Q2UqfOf\npFaLDB4P6SQ8iesZyF4VKFrj/cAvRJmp0e5W/DRnFkoEp+8c+nrru2+Dzm9kb7Uq\n0CiltqYAywKBgBtcfrV1to+7Ue0x84KwintV2rifyDRX7yI+tjkQFYKgf1zyyUxN\nc6D2vsvdvGqI+TvlrXqPPwW8/4NBrbeyux2LT8o0fYc+sp0WyKXOu2Gv21caelUH\nPYam/eultn6Y2Z0J2V0kw4Qx0GWOhQv5cZnDdb3k3iNxixmU8b03ynEpAoGBAKEA\n7O0fNe50QRZ+tOq0ihSPYQ55XrqnO3WNBDLynZJH8pbI1CpWF7vJrpVXOUs9rQWo\nA61mGR/wJMtiywaJEHWOL48PbzuR3jno0NcHfSMyOoPi9jlvSWncIFQH4TVPLF5F\n/Rh8L+ytrZE6YpWUoX6e9KGmGgDRPw5mQGpuL4RlAoGADe9n080SXlsUk4nHVjUz\nEfv7EBoBkgOpqb9T1foRfJl46NxmmTOYV3iGIhjwcDskEg284k4iq/gH6EEFyEBc\nVz13jzB1nBgjfezFesVQz7bA/+Wik6HZtxAxVg38BKMt+Q1tYw9wOjbGPqOn++VC\nsR2Sh8e3h3Knd6j1tceRIFU=\n-----END PRIVATE KEY-----\n",
+            tokenUrl: "https://oauth2.googleapis.com/token",
+            scopes: ["https://www.googleapis.com/auth/spreadsheets"]
+        };
+
+        let usersData = [];
+        let dsTuData = [];
+        let html5QrcodeScanner = null;
+        let signaturePad = null;
+        let currentUser = null;
+        let accessToken = null;
+        let tokenExpiry = 0;
+        let isSidebarCollapsed = false;
+
+        function toggleUserMenu() {
+            const dropdown = document.getElementById('userMenuDropdown');
+            dropdown.classList.toggle('hidden');
+        }
+
+        // Close dropdown when clicking outside
+        window.onclick = function (event) {
+            if (!event.target.closest('#userMenuButton')) {
+                const dropdown = document.getElementById('userMenuDropdown');
+                if (dropdown && !dropdown.classList.contains('hidden')) {
+                    dropdown.classList.add('hidden');
+                }
+            }
+        }
+
+        async function fetchAuthData() {
+            const loading = document.getElementById('loginLoading');
+            const form = document.getElementById('loginForm');
+            if (loading) loading.classList.remove('hidden');
+            if (form) form.classList.add('hidden');
+
+            try {
+                const token = await getAccessToken();
+                const sid = CONFIG.spreadsheetId;
+                const sname = CONFIG.authSheetName;
+                const url = `https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/${sname}!A1:Z200`;
+
+                const resp = await fetch(url, { headers: { "Authorization": `Bearer ${token}` } });
+                const data = await resp.json();
+
+                if (data.values && data.values.length > 1) {
+                    const headers = data.values[0].map(h => h ? h.toString().trim().toLowerCase() : '');
+                    const iId = headers.findIndex(h => h === 'id');
+                    const iName = headers.findIndex(h => h === 'ho_ten' || h === 'họ tên' || h === 'name' || h === 'ten');
+                    const iPass = headers.findIndex(h => h === 'password' || h === 'mat_khau');
+                    const iRole = headers.findIndex(h => h === 'role' || h === 'quyen');
+
+                    usersData = data.values.slice(1).map(r => ({
+                        id: iId !== -1 ? (r[iId] || '') : (r[0] || ''),
+                        name: iName !== -1 ? (r[iName] || '') : (r[1] || ''),
+                        role: iRole !== -1 ? (r[iRole] || '') : (r[5] || ''),
+                        password: iPass !== -1 ? (r[iPass] || '') : (r[6] || '')
+                    })).filter(u => u.id);
+                }
+            } catch (err) {
+                console.error("Auth Fetch Error:", err);
+            } finally {
+                if (loading) loading.classList.add('hidden');
+                if (form) form.classList.remove('hidden');
+            }
+        }
+
+        async function getAccessToken() {
+            if (accessToken && Date.now() < tokenExpiry - 300000) return accessToken;
+            const header = { alg: "RS256", typ: "JWT" };
+            const now = Math.floor(Date.now() / 1000);
+            const payload = {
+                iss: CONFIG.serviceAccountEmail,
+                scope: CONFIG.scopes.join(" "),
+                aud: CONFIG.tokenUrl,
+                exp: now + 3600,
+                iat: now
+            };
+            const sJWT = KJUR.jws.JWS.sign("RS256", JSON.stringify(header), JSON.stringify(payload), CONFIG.privateKey);
+
+            try {
+                const response = await fetch(CONFIG.tokenUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${sJWT}`
+                });
+                const data = await response.json();
+                accessToken = data.access_token;
+                tokenExpiry = Date.now() + (data.expires_in * 1000);
+                return accessToken;
+            } catch (err) { alert("Không thể xác thực với Google API"); return null; }
+        }
+
+        function handleLogin() {
+            const uid = document.getElementById('usernameInput').value.trim();
+            const pwd = document.getElementById('passwordInput').value.trim();
+            if (!uid || !pwd) return alert("Vui lòng nhập đầy đủ thông tin.");
+
+            const user = usersData.find(u => u.id === uid && (u.password ? u.password.toString() : "") === pwd);
+            if (user) {
+                currentUser = user;
+                localStorage.setItem('erp_user_session', JSON.stringify(user));
+                updateUserProfileUI();
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('mainApp').classList.remove('hidden');
+                setTimeout(initSignature, 300);
+                populateKhungGio('');
+            } else {
+                alert('Tài khoản hoặc mật khẩu không chính xác!');
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('erp_user_session');
+            document.getElementById('mainApp').classList.add('hidden');
+            document.getElementById('loginScreen').classList.remove('hidden');
+            document.getElementById('usernameInput').value = '';
+            document.getElementById('passwordInput').value = '';
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const icon = document.getElementById('toggleIcon');
+            const overlay = document.getElementById('sidebarOverlay');
+
+            if (window.innerWidth <= 768) {
+                sidebar.classList.toggle('mobile-open');
+                if (sidebar.classList.contains('mobile-open')) {
+                    if (overlay) overlay.classList.add('active');
+                } else {
+                    if (overlay) overlay.classList.remove('active');
+                }
+            } else {
+                isSidebarCollapsed = !isSidebarCollapsed;
+                if (isSidebarCollapsed) {
+                    sidebar.classList.add('collapsed');
+                    if (icon) icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />';
+                } else {
+                    sidebar.classList.remove('collapsed');
+                    if (icon) icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />';
+                }
+            }
+            setTimeout(() => { if (typeof initSignature === 'function') initSignature(); }, 350);
+        }
+
+        function updateUserProfileUI() {
+            if (!currentUser) return;
+            const nameArr = currentUser.name ? currentUser.name.split(' ') : [currentUser.id];
+            const initials = nameArr[nameArr.length - 1].charAt(0).toUpperCase();
+
+            document.getElementById('userNameHeader').textContent = currentUser.name || currentUser.id;
+            document.getElementById('userRoleHeader').textContent = currentUser.role || "Nhân viên";
+            document.getElementById('userAvatar').textContent = initials;
+
+            // Backup mobile info
+            const nameMob = document.getElementById('userNameHeaderMobile');
+            const roleMob = document.getElementById('userRoleHeaderMobile');
+            if (nameMob) nameMob.textContent = currentUser.name || currentUser.id;
+            if (roleMob) roleMob.textContent = currentUser.role || "Nhân viên";
+        }
+
+        // Init
+        window.addEventListener('load', async () => {
+            const savedSession = localStorage.getItem('erp_user_session');
+            if (savedSession) {
+                try {
+                    currentUser = JSON.parse(savedSession);
+                    updateUserProfileUI();
+                    document.getElementById('loginScreen').classList.add('hidden');
+                    document.getElementById('mainApp').classList.remove('hidden');
+                    setTimeout(initSignature, 300);
+                    populateKhungGio('');
+                } catch (e) {
+                    localStorage.removeItem('erp_user_session');
+                }
+            }
+            await fetchAuthData();
+            await fetchDsTuData();
+        });
+
+        // --- FETCH DS TU DATA ---
+        async function fetchDsTuData() {
+            try {
+                const token = await getAccessToken();
+                if (!token) return;
+                const sid = CONFIG.spreadsheetId;
+                const url = `https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/DS_TU!A1:Z1000`;
+
+                const resp = await fetch(url, { headers: { "Authorization": `Bearer ${token}` } });
+                if (!resp.ok) return;
+                const data = await resp.json();
+
+                if (data.values && data.values.length > 1) {
+                    const headers = data.values[0].map(h => h ? h.toString().trim().toLowerCase() : '');
+                    const iId = headers.findIndex(h => h === 'id' || h === 'id_tu');
+                    const iTen = headers.findIndex(h => h === 'ten' || h === 'tên' || h === 'tên tủ');
+                    const iViTri = headers.findIndex(h => h === 'vi_tri' || h === 'vị trí');
+                    const iMin = headers.findIndex(h => h === 'nhiet_do_min' || h === 'nhiệt độ min' || h === 'min');
+                    const iMax = headers.findIndex(h => h === 'nhiet_do_max' || h === 'nhiệt độ max' || h === 'max');
+
+                    dsTuData = data.values.slice(1).map(r => ({
+                        id: iId !== -1 ? r[iId] : r[0],
+                        ten: iTen !== -1 ? r[iTen] : r[1],
+                        vi_tri: iViTri !== -1 ? r[iViTri] : (r[2] || ''),
+                        nhiet_do_min: iMin !== -1 ? r[iMin] : r[3],
+                        nhiet_do_max: iMax !== -1 ? r[iMax] : r[4]
+                    })).filter(t => t.id);
+                }
+            } catch (err) {
+                console.error("Fetch DS_TU Error:", err);
+            }
+        }
+
+        // --- QR SCANNER LOGIC ---
+        function toggleQRScanner() {
+            const container = document.getElementById('qr-scanner-container');
+            if (container.classList.contains('hidden')) {
+                container.classList.remove('hidden');
+                if (!html5QrcodeScanner) {
+                    html5QrcodeScanner = new Html5QrcodeScanner(
+                        "reader", { fps: 10, qrbox: { width: 250, height: 250 } }, false);
+                    html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+                }
+            } else {
+                stopQRScanner();
+            }
+        }
+
+        function stopQRScanner() {
+            const container = document.getElementById('qr-scanner-container');
+            container.classList.add('hidden');
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.clear().catch(err => console.error(err));
+                html5QrcodeScanner = null;
+            }
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            document.getElementById('input_id_tu').value = decodedText;
+            document.getElementById('input_qr_code').value = decodedText;
+            handleIdTuChange(decodedText);
+            stopQRScanner();
+        }
+
+        function onScanFailure(error) { /* wait for valid scan */ }
+
+        // --- FORM LOGIC ---
+        function handleIdTuChange(idTu) {
+            const tuInfo = dsTuData.find(t => String(t.id).trim().toLowerCase() === String(idTu).trim().toLowerCase());
+            let typeName = String(idTu).toLowerCase();
+
+            if (tuInfo) {
+                document.getElementById('input_ten').value = tuInfo.ten || '';
+                document.getElementById('input_vi_tri').value = tuInfo.vi_tri || '';
+                document.getElementById('input_nhiet_do_min').value = tuInfo.nhiet_do_min || '';
+                document.getElementById('input_nhiet_do_max').value = tuInfo.nhiet_do_max || '';
+                typeName = tuInfo.ten ? String(tuInfo.ten).toLowerCase() : typeName;
+            } else {
+                document.getElementById('input_ten').value = '';
+                document.getElementById('input_vi_tri').value = '';
+                document.getElementById('input_nhiet_do_min').value = '';
+                document.getElementById('input_nhiet_do_max').value = '';
+            }
+
+            populateKhungGio(typeName);
+            calculateKetQua();
+        }
+
+        function populateKhungGio(tuTypeStr) {
+            const khungSelect = document.getElementById('input_khung_h');
+            khungSelect.innerHTML = '';
+            const hr = new Date().getHours();
+
+            if (tuTypeStr.includes('huyết tương')) {
+                // L1: 7-11, L2: 11-15, L3: 15-19, L4: 19-23, L5: 23-3, L6: 3-7
+                ['L1 (7h-11h)', 'L2 (11h-15h)', 'L3 (15h-19h)', 'L4 (19h-23h)', 'L5 (23h-3h)', 'L6 (3h-7h)'].forEach((label, i) => {
+                    const option = document.createElement('option');
+                    option.value = ['L1', 'L2', 'L3', 'L4', 'L5', 'L6'][i];
+                    option.text = label;
+                    khungSelect.appendChild(option);
+                });
+                let selectedLan;
+                if (hr >= 7 && hr < 11) selectedLan = 'L1';
+                else if (hr >= 11 && hr < 15) selectedLan = 'L2';
+                else if (hr >= 15 && hr < 19) selectedLan = 'L3';
+                else if (hr >= 19 && hr < 23) selectedLan = 'L4';
+                else if (hr >= 23 || hr < 3) selectedLan = 'L5';
+                else selectedLan = 'L6'; // 3h-7h
+                khungSelect.value = selectedLan;
+            } else {
+                // Sáng: 8h-15h, Chiều: 16h-23h
+                ['Sáng (8h-15h)', 'Chiều (16h-23h)'].forEach((label, i) => {
+                    const option = document.createElement('option');
+                    option.value = ['Sáng', 'Chiều'][i];
+                    option.text = label;
+                    khungSelect.appendChild(option);
+                });
+                khungSelect.value = (hr >= 16) ? 'Chiều' : 'Sáng';
+            }
+        }
+
+        function calculateKetQua() {
+            const valStr = document.getElementById('input_nhiet_do_do_dc').value;
+            const minStr = document.getElementById('input_nhiet_do_min').value;
+            const maxStr = document.getElementById('input_nhiet_do_max').value;
+
+            const kqEl = document.getElementById('input_ket_qua');
+
+            if (valStr === '' || minStr === '' || maxStr === '') {
+                kqEl.value = '';
+                kqEl.className = "w-full bg-slate-100 border border-transparent rounded-xl px-4 py-3 font-black text-slate-400 text-center text-xl uppercase tracking-wider cursor-not-allowed";
+                return;
+            }
+
+            const val = parseFloat(valStr.replace(',', '.'));
+            const min = parseFloat(String(minStr).replace(',', '.'));
+            const max = parseFloat(String(maxStr).replace(',', '.'));
+
+            let kq = "ĐẠT";
+            if (val < min) kq = "THẤP";
+            if (val > max) kq = "CAO";
+
+            kqEl.value = kq;
+
+            if (kq === "ĐẠT") kqEl.className = "w-full bg-emerald-50 border border-emerald-300 rounded-xl px-4 py-3 font-black text-emerald-600 text-center text-xl uppercase tracking-wider shadow-sm transition-colors";
+            else if (kq === "THẤP") kqEl.className = "w-full bg-blue-50 border border-blue-300 rounded-xl px-4 py-3 font-black text-blue-600 text-center text-xl uppercase tracking-wider shadow-sm transition-colors";
+            else kqEl.className = "w-full bg-rose-50 border border-rose-300 rounded-xl px-4 py-3 font-black text-rose-600 text-center text-xl uppercase tracking-wider shadow-sm transition-colors";
+        }
+
+        function initSignature() {
+            const canvas = document.getElementById('signature-pad');
+            if (canvas && !signaturePad) {
+                function resizeCanvas() {
+                    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                    canvas.width = canvas.offsetWidth * ratio;
+                    canvas.height = canvas.offsetHeight * ratio;
+                    canvas.getContext("2d").scale(ratio, ratio);
+                }
+                window.addEventListener("resize", resizeCanvas);
+                resizeCanvas();
+                signaturePad = new SignaturePad(canvas, { backgroundColor: 'rgb(248, 250, 252)', penColor: 'rgb(15, 23, 42)' });
+            }
+        }
+
+        function clearSignature() {
+            if (signaturePad) signaturePad.clear();
+        }
+
+        // --- SUBMIT DATA API ---
+        async function submitData() {
+            const idTu = document.getElementById('input_id_tu').value;
+            if (!idTu) return alert("Vui lòng quét hoặc nhập mã Tủ (id_tu)!");
+            const valDo = document.getElementById('input_nhiet_do_do_dc').value;
+            if (valDo === '') return alert("Vui lòng nhập nhiệt độ đo được!");
+
+            const btn = document.getElementById('btnSubmit');
+            const oriText = btn.innerHTML;
+            btn.innerHTML = `<svg class="w-6 h-6 animate-spin -ml-1 mr-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> ĐANG LƯU...`;
+            btn.disabled = true;
+
+            try {
+                const token = await getAccessToken();
+                const now = new Date();
+                const pad0 = n => n < 10 ? '0' + n : n;
+
+                const genId = () => Array.from({ length: 8 }, () => 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'.charAt(Math.floor(Math.random() * 62))).join('');
+                const id_val = genId();
+                const ngay_val = `${pad0(now.getDate())}/${pad0(now.getMonth() + 1)}/${now.getFullYear()}`;
+                const ngay_h_val = `${ngay_val} ${pad0(now.getHours())}:${pad0(now.getMinutes())}:${pad0(now.getSeconds())}`;
+                const khung_h_val = document.getElementById('input_khung_h').value;
+                const qr_code_val = document.getElementById('input_qr_code').value || idTu;
+                const id_tu_val = idTu;
+                const ten_val = document.getElementById('input_ten').value;
+                const vi_tri_val = document.getElementById('input_vi_tri').value;
+                const nhiet_do_min_val = document.getElementById('input_nhiet_do_min').value;
+                const nhiet_do_max_val = document.getElementById('input_nhiet_do_max').value;
+                const nhiet_do_do_dc_val = valDo;
+                const ket_qua_val = document.getElementById('input_ket_qua').value;
+                const id_nv_val = currentUser ? (currentUser.id || currentUser.name) : '';
+                const ten_nv_val = currentUser ? (currentUser.name || '') : '';
+                const ghi_chu_val = document.getElementById('input_ghi_chu').value;
+
+                let chu_ky_val = '';
+                if (signaturePad && !signaturePad.isEmpty()) {
+                    chu_ky_val = signaturePad.toDataURL();
+                }
+
+                const xac_nhan_val = "";
+                const udt_val = now.toISOString();
+                const lb1_val = `${id_tu_val} | ${nhiet_do_do_dc_val} | ${ket_qua_val}`;
+                const nam_thang_val = `${now.getFullYear()}/${pad0(now.getMonth() + 1)}`;
+                const nam_thang_tu_val = `${nam_thang_val} | ${id_tu_val}`;
+
+                const rowData = [
+                    id_val, ngay_val, ngay_h_val, khung_h_val, qr_code_val,
+                    id_tu_val, ten_val, vi_tri_val, nhiet_do_min_val, nhiet_do_max_val,
+                    nhiet_do_do_dc_val, ket_qua_val, id_nv_val, ghi_chu_val, chu_ky_val,
+                    xac_nhan_val, udt_val, lb1_val, nam_thang_val, nam_thang_tu_val
+                ];
+                const rowCV = [
+                    genId(),
+                    ngay_val,
+                    id_nv_val,
+                    ten_nv_val,
+                    true,
+                    true,
+                    udt_val
+                ];
+                const shouldAppendCV = khung_h_val === 'Sáng' && now.getHours() === 8;
+
+                const sid = CONFIG.spreadsheetId;
+                const urlData = `https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/DATA:append?valueInputOption=USER_ENTERED`;
+                const urlCV = `https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/CV:append?valueInputOption=USER_ENTERED`;
+
+                const resData = await fetch(urlData, {
+                    method: 'POST',
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ values: [rowData] })
+                });
+                let resCV = { ok: true };
+                if (shouldAppendCV) {
+                    resCV = await fetch(urlCV, {
+                        method: 'POST',
+                        headers: {
+                            "Authorization": `Bearer ${token}`,
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({ values: [rowCV] })
+                    });
+                }
+
+                if (resData.ok && resCV.ok) {
+                    alert("Lưu dữ liệu thành công!");
+                    // Reset
+                    document.getElementById('input_id_tu').value = '';
+                    document.getElementById('input_qr_code').value = '';
+                    handleIdTuChange('');
+                    document.getElementById('input_nhiet_do_do_dc').value = '';
+                    document.getElementById('input_ghi_chu').value = '';
+                    clearSignature();
+                } else {
+                    const errData = resData.ok ? null : await resData.json();
+                    const errCV = resCV.ok ? null : await resCV.json();
+                    console.error({ errData, errCV });
+                    alert("Lỗi khi lưu dữ liệu. Vui lòng thử lại!");
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Có lỗi xảy ra: " + e.message);
+            } finally {
+                btn.innerHTML = oriText;
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+
+</html>
