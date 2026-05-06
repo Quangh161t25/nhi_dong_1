@@ -1018,7 +1018,7 @@
                     id_val, ngay_val, ngay_h_val, khung_h_val, qr_code_val,
                     id_tu_val, ten_val, vi_tri_val, nhiet_do_min_val, nhiet_do_max_val,
                     nhiet_do_do_dc_val, ket_qua_val, id_nv_val, ghi_chu_val, chu_ky_val,
-                    xac_nhan_val, udt_val, lb1_val, nam_thang_val, nam_thang_tu_val
+                    xac_nhan_val, udt_val, lb1_val, "'" + nam_thang_val, nam_thang_tu_val
                 ];
                 const rowCV = [
                     genId(),
@@ -1054,6 +1054,34 @@
                         },
                         body: JSON.stringify({ values: [rowCV] })
                     });
+                }
+
+                // DATA_ALL logic: Check for duplicates and append if not exists
+                try {
+                    const id_all = `${nam_thang_val} | ${ten_val}`;
+                    const urlAllCheck = `https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/DATA_ALL!A:A`;
+                    const resCheckAll = await fetch(urlAllCheck, { headers: { "Authorization": `Bearer ${token}` } });
+                    const dataCheckAll = await resCheckAll.json();
+
+                    let existsInAll = false;
+                    if (dataCheckAll.values) {
+                        existsInAll = dataCheckAll.values.flat().some(v => v === id_all);
+                    }
+
+                    if (!existsInAll) {
+                        const urlAllAppend = `https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/DATA_ALL:append?valueInputOption=USER_ENTERED`;
+                        await fetch(urlAllAppend, {
+                            method: 'POST',
+                            headers: {
+                                "Authorization": `Bearer ${token}`,
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify({ values: [[id_all, "'" + nam_thang_val, ten_val]] })
+                        });
+                    }
+                } catch (allErr) {
+                    console.error("DATA_ALL error:", allErr);
+                    // We don't alert the user for data_all failure to avoid blocking the main flow
                 }
 
                 if (resData.ok && resCV.ok) {
