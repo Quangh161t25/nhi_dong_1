@@ -179,8 +179,8 @@
             font-weight: 700;
         }
 
-        .temp-8,
-        .temp-2 {
+        .temp--70,
+        .temp--85 {
             color: #c0392b;
         }
 
@@ -324,18 +324,18 @@
                 <p>Khoa Xét nghiệm Huyết Học</p>
             </div>
             <div class="top-right" style="text-align:right;">
-                <p>Phiếu theo dõi nhiệt độ tủ lạnh trữ hóa chất 2-8 C</p>
+                <p></p>
             </div>
         </div>
 
         <div class="title">
-            <h1>PHIẾU THEO DÕI NHIỆT ĐỘ TỦ LẠNH TRỮ HÓA CHẤT 2-8°C</h1>
+            <h1>PHIẾU THEO DÕI NHIỆT ĐỘ</h1>
             <div class="sub">(TRANG 1)</div>
         </div>
 
         <div class="meta">
             <div class="col" style="width: 35%;">
-                <p><b>Loại tủ (2-8°C):</b> <span class="dots" id="meta-tu-1"></span></p>
+                <p><b>Loại tủ (-70°C đến -85°C):</b> <span class="dots" id="meta-tu-1"></span></p>
                 <p><b>Người quản lý:</b> <span class="dots" id="meta-nql-1"></span></p>
             </div>
             <div class="col" style="width: 35%; text-align:left; padding-left: 20px;">
@@ -371,7 +371,7 @@
         </div>
 
         <div class="note">* Ghi chú: S = Sáng (8:00), C = Chiều (16:00). Đánh dấu √ vào ô nhiệt độ đo được.</div>
-        <div class="bottom-left-text">FM-EQ-HE-003 V4.0</div>
+        <div class="bottom-left-text">FM-EQ-AL-003/3 V3.0</div>
         <div class="bottom-right-text" id="eff-date-1"></div>
     </div>
 
@@ -383,18 +383,18 @@
                 <p>Khoa Xét nghiệm Huyết Học</p>
             </div>
             <div class="top-right" style="text-align:right;">
-                <p>Phiếu theo dõi nhiệt độ tủ lạnh trữ hóa chất 2-8 C</p>
+                <p></p>
             </div>
         </div>
 
         <div class="title">
-            <h1>PHIẾU THEO DÕI NHIỆT ĐỘ TỦ LẠNH TRỮ HÓA CHẤT 2-8°C</h1>
+            <h1>PHIẾU THEO DÕI NHIỆT ĐỘ</h1>
             <div class="sub">(TRANG 2)</div>
         </div>
 
         <div class="meta">
             <div class="col" style="width: 35%;">
-                <p><b>Loại tủ (2-8°C):</b> <span class="dots" id="meta-tu-2"></span></p>
+                <p><b>Loại tủ (-70°C đến -85°C):</b> <span class="dots" id="meta-tu-2"></span></p>
                 <p><b>Người quản lý:</b> <span class="dots" id="meta-nql-2"></span></p>
             </div>
             <div class="col" style="width: 35%; text-align:left; padding-left: 20px;">
@@ -430,14 +430,14 @@
         </div>
 
         <div class="note">* Ghi chú: S = Sáng (8:00), C = Chiều (16:00). Đánh dấu √ vào ô nhiệt độ đo được.</div>
-        <div class="bottom-left-text">FM-EQ-HE-003 V4.0</div>
+        <div class="bottom-left-text">FM-EQ-AL-003/3 V3.0</div>
         <div class="bottom-right-text" id="eff-date-2"></div>
     </div>
 
     <button class="print-btn" onclick="printPage()">IN</button>
 
     <script>
-        const temps = [8, 7, 6, 5, 4, 3, 2];
+        const temps = [-70, -71, -72, -73, -74, -75, -76, -77, -78, -79, -80, -81, -82, -83, -84, -85];
 
         function parseDataParam() {
             const search = window.location.search || '';
