@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phiếu bảo trì thiết bị</title>
+  <style>
+    :root {
+      --border: #222;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: "Times New Roman", serif;
+      color: #111;
+      background: #fff;
+    }
+
+    .sheet {
+      width: 297mm;
+      min-height: 210mm;
+      margin: 0 auto;
+      padding: 8mm 10mm;
+      background: #fff;
+    }
+
+    .top-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .unit {
+      line-height: 1.2;
+      font-size: 24px;
+    }
+
+    .title-wrap {
+      text-align: center;
+      flex: 1;
+    }
+
+    .title {
+      margin: 0;
+      font-size: 36px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .month-line {
+      margin-top: 6px;
+      font-size: 22px;
+    }
+
+    .section-title {
+      margin: 12px 0 6px;
+      font-size: 26px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    .maintain th,
+    .maintain td,
+    .weekly th,
+    .weekly td,
+    .periodic th,
+    .periodic td {
+      border: 1px solid var(--border);
+      padding: 3px 5px;
+      font-size: 16px;
+      vertical-align: middle;
+    }
+
+    .maintain thead th {
+      text-align: center;
+      font-weight: 700;
+    }
+
+    .stt {
+      width: 36px;
+      text-align: center;
+    }
+
+    .task-col {
+      width: 240px;
+      font-weight: 600;
+    }
+
+    .day {
+      width: 28px;
+      height: 34px;
+      text-align: center;
+      font-size: 14px;
+      padding: 0;
+    }
+
+    .maintain tbody .task-col {
+      font-size: 14px;
+      line-height: 1.2;
+      font-weight: 600;
+    }
+
+    .tick {
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .sig-row td {
+      height: 64px;
+      vertical-align: top;
+      font-size: 14px;
+    }
+
+    .sig-row .day {
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: clip;
+      vertical-align: middle;
+      position: relative;
+      text-align: center;
+    }
+
+    .operator-signature {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%) rotate(-90deg);
+      transform-origin: center center;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: 0.6px;
+      white-space: nowrap;
+    }
+
+    .weekly th,
+    .periodic th {
+      text-align: center;
+      font-weight: 700;
+    }
+
+    .weekly td {
+      height: 36px;
+    }
+
+    .w1 { width: 280px; }
+    .w2 { width: auto; }
+    .w3 { width: 220px; }
+
+    .periodic td {
+      height: 44px;
+    }
+
+    .foot {
+      margin-top: 8px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 16px;
+    }
+
+    .placeholder {
+      color: #444;
+      letter-spacing: 0.2px;
+    }
+
+    @page {
+      size: A4 landscape;
+      margin: 0;
+    }
+
+    @media print {
+      body {
+        background: #fff;
+        padding: 0;
+      }
+      .sheet {
+        width: 297mm;
+        min-height: 210mm;
+        border: none;
+        margin: 0;
+        padding: 8mm 10mm;
+        break-inside: avoid-page;
+        page-break-inside: avoid;
+      }
+
+      .top-line,
+      .section-title,
+      .maintain,
+      .weekly,
+      .periodic,
+      .foot {
+        break-inside: avoid-page;
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="sheet">
+    <div class="top-line">
+      <div class="unit">
+        <div>Bệnh viện Nhi Đồng 1</div>
+        <div>Ban QLCLXN</div>
+        <div>Khoa XN Huyết học</div>
+      </div>
+
+      <div class="title-wrap">
+        <h1 class="title">PHIẾU BẢO TRÌ THIẾT BỊ ....................</h1>
+        <div class="month-line" id="monthLine">Tháng ......../........</div>
+      </div>
+    </div>
+
+    <div class="section-title">I. Bảo dưỡng hằng ngày: (Người sử dụng thực hiện)</div>
+    <table class="maintain">
+      <thead>
+        <tr id="dailyCleanRow">
+          <th class="stt">S<br>T<br>T</th>
+          <th class="task-col">Ngày</th>
+          <th class="day">1</th>
+          <th class="day">2</th>
+          <th class="day">3</th>
+          <th class="day">4</th>
+          <th class="day">5</th>
+          <th class="day">6</th>
+          <th class="day">7</th>
+          <th class="day">8</th>
+          <th class="day">9</th>
+          <th class="day">10</th>
+          <th class="day">11</th>
+          <th class="day">12</th>
+          <th class="day">13</th>
+          <th class="day">14</th>
+          <th class="day">15</th>
+          <th class="day">16</th>
+          <th class="day">17</th>
+          <th class="day">18</th>
+          <th class="day">19</th>
+          <th class="day">20</th>
+          <th class="day">21</th>
+          <th class="day">22</th>
+          <th class="day">23</th>
+          <th class="day">24</th>
+          <th class="day">25</th>
+          <th class="day">26</th>
+          <th class="day">27</th>
+          <th class="day">28</th>
+          <th class="day">29</th>
+          <th class="day">30</th>
+          <th class="day">31</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr id="dailyCheckRow">
+          <td class="stt" style="text-align:center;">1</td>
+          <td class="task-col">Vệ sinh màn hình, bàn phím, bệ mặt máy bằng dung dịch khử khuẩn.</td>
+          <td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td>
+        </tr>
+        <tr>
+          <td class="stt" style="text-align:center;">2</td>
+          <td class="task-col">Kiểm tra tình trạng máy (điện, hóa chất, vật tư tiêu hao)</td>
+          <td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td>
+        </tr>
+        <tr class="sig-row" id="operatorRow">
+          <td class="stt" style="text-align:center;">3</td>
+          <td class="task-col">Người thực hiện</td>
+          <td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td><td class="day"></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="section-title">II. Bảo dưỡng hằng tuần: (Người sử dụng thực hiện)</div>
+    <table class="weekly">
+      <thead>
+        <tr>
+          <th class="w1">Thời gian thực hiện</th>
+          <th class="w2">Nội dung thực hiện</th>
+          <th class="w3">Người thực hiện</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Tuần 1 (ngày....................)</td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>Tuần 2 (ngày....................)</td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>Tuần 3 (ngày....................)</td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>Tuần 4 (ngày....................)</td>
+          <td></td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="section-title">III. Bảo dưỡng tháng/ quý/ 6 tháng/ 12 tháng : KS công ty thực hiện</div>
+    <table class="periodic">
+      <thead>
+        <tr>
+          <th style="width: 45%;">NỘI DUNG BẢO TRÌ</th>
+          <th colspan="2">Ngày ..........Tháng ..............Năm...............</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Thực hiện theo nội dung của phụ lục bảo trì thiết bị (SD-EQ-AL-003/1001)</td>
+          <td style="width: 27%;">KS thực hiện:</td>
+          <td style="width: 28%;">NV tiếp nhận:</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="foot">
+      <div>FM-EQ-HE-006 V2.0</div>
+      <div>Ngày hiệu lực 01/05/2021</div>
+    </div>
+  </div>
+  <script>
+    (function fillFromQuery() {
+      const rawQuery = window.location.search.replace(/^\?/, "");
+      if (!rawQuery) return;
+
+      const parts = rawQuery.split("&").filter(Boolean);
+      let monthValue = "";
+      let entriesRaw = "";
+
+      for (const part of parts) {
+        if (part.startsWith("thang=")) {
+          monthValue = decodeURIComponent(part.slice(6));
+          continue;
+        }
+
+        if (part.startsWith("data=") || part.startsWith("entries=")) {
+          const equalIndex = part.indexOf("=");
+          entriesRaw = decodeURIComponent(part.slice(equalIndex + 1));
+          continue;
+        }
+
+        if (!part.includes("=")) {
+          entriesRaw = decodeURIComponent(part);
+        }
+      }
+
+      if (monthValue) {
+        const monthLine = document.getElementById("monthLine");
+        if (monthLine) monthLine.textContent = "Tháng " + monthValue;
+      }
+
+      if (!entriesRaw) return;
+
+      const bodyRows = document.querySelectorAll(".maintain tbody tr");
+      if (bodyRows.length < 3) return;
+
+      const row1Cells = bodyRows[0].querySelectorAll("td.day");
+      const row2Cells = bodyRows[1].querySelectorAll("td.day");
+      const row3Cells = bodyRows[2].querySelectorAll("td.day");
+
+      const entries = entriesRaw
+        .split(",")
+        .map(function (item) { return item.trim(); })
+        .filter(Boolean);
+
+      entries.forEach(function (entry) {
+        const chunks = entry.split("|");
+        if (chunks.length < 2) return;
+
+        const day = Number(chunks[0]);
+        const operator = chunks.slice(1).join("|").trim();
+        if (!Number.isInteger(day) || day < 1 || day > 31) return;
+
+        const index = day - 1;
+        if (row1Cells[index]) row1Cells[index].innerHTML = "<span class='tick'>✓</span>";
+        if (row2Cells[index]) row2Cells[index].innerHTML = "<span class='tick'>✓</span>";
+        if (row3Cells[index]) {
+          row3Cells[index].innerHTML = "<span class='operator-signature'>" + operator + "</span>";
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
