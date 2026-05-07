@@ -573,7 +573,6 @@
 
         let usersData = [];
         let dsTuData = [];
-        let html5QrcodeScanner = null;
         let signaturePad = null;
         let currentUser = null;
         let accessToken = null;
@@ -759,26 +758,43 @@
         }
 
         // --- QR SCANNER LOGIC ---
-        function toggleQRScanner() {
+        let html5QrCode = null;
+
+        async function toggleQRScanner() {
             const container = document.getElementById('qr-scanner-container');
             if (container.classList.contains('hidden')) {
                 container.classList.remove('hidden');
-                if (!html5QrcodeScanner) {
-                    html5QrcodeScanner = new Html5QrcodeScanner(
-                        "reader", { fps: 10, qrbox: { width: 250, height: 250 } }, false);
-                    html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+                if (!html5QrCode) {
+                    html5QrCode = new Html5Qrcode("reader");
+                }
+
+                const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+                try {
+                    await html5QrCode.start(
+                        { facingMode: "environment" },
+                        config,
+                        onScanSuccess,
+                        onScanFailure
+                    );
+                } catch (err) {
+                    console.error("Camera start error:", err);
+                    alert("Không thể khởi động camera. Vui lòng cấp quyền truy cập camera.");
+                    container.classList.add('hidden');
                 }
             } else {
-                stopQRScanner();
+                await stopQRScanner();
             }
         }
 
-        function stopQRScanner() {
+        async function stopQRScanner() {
             const container = document.getElementById('qr-scanner-container');
             container.classList.add('hidden');
-            if (html5QrcodeScanner) {
-                html5QrcodeScanner.clear().catch(err => console.error(err));
-                html5QrcodeScanner = null;
+            if (html5QrCode && html5QrCode.isScanning) {
+                try {
+                    await html5QrCode.stop();
+                } catch (err) {
+                    console.error("Stop scanner error:", err);
+                }
             }
         }
 
