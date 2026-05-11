@@ -11,8 +11,8 @@
             --grid: #999;
             --text: #000;
             --paper: #fff;
-            --temp-line: #0056b3;
-            --hum-line: #d32f2f;
+            --temp-line: #d32f2f;
+            --hum-line: #0056b3;
             --font: "Segoe UI", Roboto, Arial, sans-serif;
         }
 
@@ -106,11 +106,11 @@
         }
 
         .temp-val {
-            color: #000;
+            color: #d32f2f;
         }
 
         .hum-val {
-            color: #d32f2f;
+            color: #0056b3;
         }
 
         tr.heavy-border td {
@@ -196,8 +196,8 @@
         </div>
 
         <div class="meta-top">
-            <div>Nhiệt độ phòng: <span class="dots" id="ndp-ui">21-26°C</span></div>
-            <div>Ẩm độ: <span class="dots" id="adp-ui">≤ 70%</span></div>
+            <div>Nhiệt độ phòng: <span class="dots" id="ndp-ui" style="color: #d32f2f;">21-26°C</span></div>
+            <div>Ẩm độ: <span class="dots" id="adp-ui" style="color: #0056b3;">≤ 70%</span></div>
             <div>Mã nhiệt ẩm kế: <span class="dots" id="mtb-ui">HE-sp-003</span></div>
             <div>Hệ số hiệu chính: <span class="dots" id="hshc-ui">..........</span></div>
             <div style="background: yellow;">Tháng: <span class="dots" id="thang-ui">...</span> Năm: <span class="dots"
@@ -218,8 +218,8 @@
                         </script>
                     </tr>
                     <tr>
-                        <th class="sub-header">T ºC</th>
-                        <th class="sub-header" style="color: red;">Ẩm độ %</th>
+                        <th class="sub-header" style="color: #d32f2f;">T ºC</th>
+                        <th class="sub-header" style="color: #0056b3;">Ẩm độ %</th>
                         <script>
                             for (let i = 1; i <= 31; i++) {
                                 document.write(`<th class="sub-header">S</th><th class="sub-header">C</th>`);
@@ -244,15 +244,25 @@
                             document.write(`</tr>`);
                         }
                     </script>
+                    <tr style="height: 38px; background: #fdfdfd;">
+                        <td colspan="2" style="font-weight: bold; font-size: 10px;">Ký tên</td>
+                        <script>
+                            for (let j = 1; j <= 31; j++) {
+                                document.write(`<td id="nth-${j}-s" style="font-size: 8px; writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; padding: 2px 0;"></td>`);
+                                document.write(`<td id="nth-${j}-c" style="font-size: 8px; writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; padding: 2px 0;"></td>`);
+                            }
+                        </script>
+                    </tr>
                 </tbody>
             </table>
         </div>
 
         <div class="footer">
             <div class="footer-info">
-                <div><b>Người thực hiện:</b> .......................</div>
+                <div><b>Người thực hiện:</b> <span id="nth-footer-ui"
+                        style="font-weight: bold;">.......................</span></div>
                 <div>Thời gian ghi nhiệt độ và ẩm độ: Thứ 2, 3, 4, 5, 6, 7, CN</div>
-                <div><b>Chấm màu xanh: nhiệt độ - Chấm màu đỏ: ẩm độ</b></div>
+                <div><b>Chấm màu đỏ: nhiệt độ - Chấm màu xanh: ẩm độ</b></div>
                 <div><b>S (Sáng) 7:30-8:00, C (Chiều) 15:30-16:00</b></div>
             </div>
         </div>
@@ -270,11 +280,23 @@
         function getParams() { return new URLSearchParams(window.location.search); }
 
         function updateHeader(params) {
-            const fields = ['thang', 'nam', 'ndp', 'adp', 'mtb', 'hshc', 'ql'];
+            const fields = ['thang', 'nam', 'ndp', 'adp', 'mtb', 'hshc', 'ql', 'nth'];
             fields.forEach(f => {
                 const el = document.getElementById(f + '-ui');
                 if (el && params.get(f)) el.textContent = params.get(f);
             });
+            // Update footer as well
+            const footerNth = document.getElementById('nth-footer-ui');
+            if (footerNth && params.get('nth')) footerNth.textContent = params.get('nth');
+
+            // Update signature cells from nth1s, nth1c...
+            for (let d = 1; d <= 31; d++) {
+                ['s', 'c'].forEach(s => {
+                    const el = document.getElementById(`nth-${d}-${s}`);
+                    const val = params.get(`nth${d}${s}`);
+                    if (el && val) el.textContent = val;
+                });
+            }
         }
 
         function getCellCenter(cell, container) {
