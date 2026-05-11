@@ -518,9 +518,9 @@
                                 style="background:rgba(204,251,241,0.4); border:1.5px solid #99f6e4; border-radius:1rem;">
                                 <label class="block text-sm font-black mb-2 tracking-wide" style="color:#0f766e;">ĐỘ ẨM
                                     ĐO ĐƯỢC</label>
-                                <input type="number" step="any" id="input_do_am_do_dc"
+                                <input type="number" step="5" id="input_do_am_do_dc" onchange="validateHumidity(this)"
                                     class="w-full bg-white rounded-xl px-4 py-3 font-black text-center text-xl shadow-sm transition-all"
-                                    style="border:2px solid #14b8a6; color:#0f766e; outline:none;" placeholder="0.0"
+                                    style="border:2px solid #14b8a6; color:#0f766e; outline:none;" placeholder="0"
                                     onfocus="this.style.boxShadow='0 0 0 4px rgba(20,184,166,0.2)'"
                                     onblur="this.style.boxShadow='none'">
                             </div>
@@ -569,15 +569,25 @@
                             </div>
                         </div>
 
-                        <div class="pt-6 mt-4 mobile-sticky-footer" style="border-top:1.5px solid #ccfbf1;">
+                        <div class="pt-6 mt-4 mobile-sticky-footer"
+                            style="border-top:1.5px solid #ccfbf1; display: flex; gap: 10px;">
+                            <button type="button" onclick="openPrintReport()"
+                                class="w-1/3 text-white font-bold py-4 rounded-2xl shadow-lg transition-all active:scale-[0.98] flex justify-center items-center gap-2 text-base"
+                                style="background:linear-gradient(135deg,#64748b,#475569); box-shadow:0 6px 16px -4px rgba(71,85,105,0.3);">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                                </svg>
+                                IN PHIẾU
+                            </button>
                             <button type="button" id="btnSubmit" onclick="submitData()"
-                                class="w-full text-white font-black py-4 rounded-2xl shadow-xl transition-all active:scale-[0.98] flex justify-center items-center gap-3 text-lg"
+                                class="flex-1 text-white font-black py-4 rounded-2xl shadow-xl transition-all active:scale-[0.98] flex justify-center items-center gap-2 text-lg"
                                 style="background:linear-gradient(135deg,#0f766e,#0d9488,#14b8a6); box-shadow:0 8px 24px -4px rgba(13,148,136,0.35);">
                                 <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                                         d="M5 13l4 4L19 7" />
                                 </svg>
-                                LƯU LÊN HỆ THỐNG
+                                LƯU DỮ LIỆU
                             </button>
                         </div>
                     </div>
@@ -981,6 +991,14 @@
             else kqEl.className = "w-full bg-rose-50 border-2 border-rose-300 rounded-xl px-4 py-3 font-black text-rose-600 text-center text-xl uppercase tracking-wider shadow-sm transition-colors";
         }
 
+        function validateHumidity(input) {
+            let val = parseFloat(input.value);
+            if (!isNaN(val) && val % 5 !== 0) {
+                alert("Độ ẩm đo được phải là số chia hết cho 5 (ví dụ: 40, 45, 50,...)");
+                input.value = Math.round(val / 5) * 5;
+            }
+        }
+
         function initSignature() {
             const canvas = document.getElementById('signature-pad');
             if (canvas && !signaturePad) {
@@ -1006,6 +1024,11 @@
             if (!idTu) return alert("Vui lòng quét hoặc nhập mã Tủ (id_tu)!");
             const valDo = document.getElementById('input_nhiet_do_do_dc').value;
             if (valDo === '') return alert("Vui lòng nhập nhiệt độ đo được!");
+
+            const doAmDo = document.getElementById('input_do_am_do_dc').value;
+            if (doAmDo !== '' && parseFloat(doAmDo) % 5 !== 0) {
+                return alert("Độ ẩm phải là số chia hết cho 5!");
+            }
 
             const btn = document.getElementById('btnSubmit');
             const oriText = btn.innerHTML;
@@ -1142,6 +1165,36 @@
                 btn.innerHTML = oriText;
                 btn.disabled = false;
             }
+        }
+
+        function openPrintReport() {
+            const tenTu = document.getElementById('input_ten').value;
+            const idTu = document.getElementById('input_id_tu').value;
+            if (!idTu) return alert("Vui lòng chọn Tủ trước khi in!");
+
+            const now = new Date();
+            const thang = now.getMonth() + 1;
+            const nam = now.getFullYear();
+            const nth = currentUser ? currentUser.name : '';
+
+            // Xác định mẫu in dựa trên tên tủ
+            let templateName = 'tu_2_8.html'; // Mặc định
+            if (tenTu.toLowerCase().includes('phòng nhận mẫu')) {
+                templateName = 'phieu_theo_doi_nhiet_do_va_do_am_phong_nhan_mau.html';
+            } else if (tenTu.toLowerCase().includes('âm sâu')) {
+                templateName = 'tu_am_sau.html';
+            }
+
+            const params = new URLSearchParams({
+                thang: thang,
+                nam: nam,
+                mtb: idTu,
+                tu: tenTu,
+                nth: nth,
+                ql: 'TAN006' // Giá trị mặc định từ mẫu in
+            });
+
+            window.open(`${templateName}?${params.toString()}`, '_blank');
         }
     </script>
 </body>
