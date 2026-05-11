@@ -500,6 +500,32 @@
                             </div>
                         </div>
 
+                        <!-- Row 3.5: Humidity -->
+                        <div id="humidity-section" class="hidden grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
+                            <div>
+                                <label class="block text-[11px] md:text-sm font-bold mb-2" style="color:#64748b;">Độ ẩm
+                                    tối thiểu (%)</label>
+                                <input type="text" id="input_do_am_min"
+                                    class="input-readonly text-center font-black text-lg" readonly placeholder="--">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] md:text-sm font-bold mb-2" style="color:#64748b;">Độ ẩm
+                                    tối đa (%)</label>
+                                <input type="text" id="input_do_am_max"
+                                    class="input-readonly text-center font-black text-lg" readonly placeholder="--">
+                            </div>
+                            <div class="col-span-2 md:col-span-1 p-4 md:p-0 rounded-2xl md:rounded-none -mx-2 md:mx-0"
+                                style="background:rgba(204,251,241,0.4); border:1.5px solid #99f6e4; border-radius:1rem;">
+                                <label class="block text-sm font-black mb-2 tracking-wide" style="color:#0f766e;">ĐỘ ẨM
+                                    ĐO ĐƯỢC</label>
+                                <input type="number" step="any" id="input_do_am_do_dc"
+                                    class="w-full bg-white rounded-xl px-4 py-3 font-black text-center text-xl shadow-sm transition-all"
+                                    style="border:2px solid #14b8a6; color:#0f766e; outline:none;" placeholder="0.0"
+                                    onfocus="this.style.boxShadow='0 0 0 4px rgba(20,184,166,0.2)'"
+                                    onblur="this.style.boxShadow='none'">
+                            </div>
+                        </div>
+
                         <!-- Row 4 -->
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
                             <div>
@@ -743,13 +769,17 @@
                     const iViTri = headers.findIndex(h => h === 'vi_tri' || h === 'vị trí');
                     const iMin = headers.findIndex(h => h === 'nhiet_do_min' || h === 'nhiệt độ min' || h === 'min');
                     const iMax = headers.findIndex(h => h === 'nhiet_do_max' || h === 'nhiệt độ max' || h === 'max');
+                    const iAmMin = headers.findIndex(h => h === 'do_am_min' || h === 'độ ẩm min');
+                    const iAmMax = headers.findIndex(h => h === 'do_am_max' || h === 'độ ẩm max');
 
                     dsTuData = data.values.slice(1).map(r => ({
                         id: iId !== -1 ? r[iId] : r[0],
                         ten: iTen !== -1 ? r[iTen] : r[1],
                         vi_tri: iViTri !== -1 ? r[iViTri] : (r[2] || ''),
                         nhiet_do_min: iMin !== -1 ? r[iMin] : r[3],
-                        nhiet_do_max: iMax !== -1 ? r[iMax] : r[4]
+                        nhiet_do_max: iMax !== -1 ? r[iMax] : r[4],
+                        do_am_min: iAmMin !== -1 ? r[iAmMin] : (r[5] || ''),
+                        do_am_max: iAmMax !== -1 ? r[iAmMax] : (r[6] || '')
                     })).filter(t => t.id);
                 }
             } catch (err) {
@@ -812,17 +842,41 @@
             const tuInfo = dsTuData.find(t => String(t.id).trim().toLowerCase() === String(idTu).trim().toLowerCase());
             let typeName = String(idTu).toLowerCase();
 
+            const humiditySection = document.getElementById('humidity-section');
+            let showHumidity = false;
+
             if (tuInfo) {
                 document.getElementById('input_ten').value = tuInfo.ten || '';
                 document.getElementById('input_vi_tri').value = tuInfo.vi_tri || '';
                 document.getElementById('input_nhiet_do_min').value = tuInfo.nhiet_do_min || '';
                 document.getElementById('input_nhiet_do_max').value = tuInfo.nhiet_do_max || '';
+                document.getElementById('input_do_am_min').value = tuInfo.do_am_min || '';
+                document.getElementById('input_do_am_max').value = tuInfo.do_am_max || '';
                 typeName = tuInfo.ten ? String(tuInfo.ten).toLowerCase() : typeName;
+
+                const targetNames = [
+                    "phiếu theo dõi nhiệt độ và độ ẩm phòng nhận mẫu",
+                    "phiếu theo dõi nhiệt độ và độ ẩm phòng đông máu - tế bào",
+                    "phiếu theo dõi nhiệt độ và độ ẩm phòng ngân hàng máu"
+                ];
+                if (tuInfo.ten && targetNames.includes(tuInfo.ten.trim().toLowerCase())) {
+                    showHumidity = true;
+                }
             } else {
                 document.getElementById('input_ten').value = '';
                 document.getElementById('input_vi_tri').value = '';
                 document.getElementById('input_nhiet_do_min').value = '';
                 document.getElementById('input_nhiet_do_max').value = '';
+                document.getElementById('input_do_am_min').value = '';
+                document.getElementById('input_do_am_max').value = '';
+            }
+
+            if (humiditySection) {
+                if (showHumidity) humiditySection.classList.remove('hidden');
+                else {
+                    humiditySection.classList.add('hidden');
+                    document.getElementById('input_do_am_do_dc').value = '';
+                }
             }
 
             populateKhungGio(typeName);
@@ -975,6 +1029,9 @@
                 const nhiet_do_min_val = document.getElementById('input_nhiet_do_min').value;
                 const nhiet_do_max_val = document.getElementById('input_nhiet_do_max').value;
                 const nhiet_do_do_dc_val = valDo;
+                const do_am_min_val = document.getElementById('input_do_am_min').value;
+                const do_am_max_val = document.getElementById('input_do_am_max').value;
+                const do_am_do_dc_val = document.getElementById('input_do_am_do_dc').value;
                 const ket_qua_val = document.getElementById('input_ket_qua').value;
                 const id_nv_val = currentUser ? (currentUser.id || currentUser.name) : '';
                 const ten_nv_val = currentUser ? (currentUser.name || '') : '';
@@ -994,7 +1051,8 @@
                 const rowData = [
                     id_val, ngay_val, ngay_h_val, khung_h_val, qr_code_val,
                     id_tu_val, ten_val, vi_tri_val, nhiet_do_min_val, nhiet_do_max_val,
-                    nhiet_do_do_dc_val, ket_qua_val, id_nv_val, ghi_chu_val, chu_ky_val,
+                    nhiet_do_do_dc_val, do_am_min_val, do_am_max_val, do_am_do_dc_val,
+                    ket_qua_val, id_nv_val, ghi_chu_val, chu_ky_val,
                     xac_nhan_val, udt_val, lb1_val, "'" + nam_thang_val, nam_thang_tu_val
                 ];
                 const rowCV = [
@@ -1068,6 +1126,7 @@
                     document.getElementById('input_qr_code').value = '';
                     handleIdTuChange('');
                     document.getElementById('input_nhiet_do_do_dc').value = '';
+                    document.getElementById('input_do_am_do_dc').value = '';
                     document.getElementById('input_ghi_chu').value = '';
                     clearSignature();
                 } else {
