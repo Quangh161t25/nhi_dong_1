@@ -277,24 +277,70 @@
     <script>
         const TEMP_MAX = 32, HUM_MAX = 100;
 
-        function getParams() { return new URLSearchParams(window.location.search); }
+        function getParams() {
+            const search = window.location.search || '';
+            const rawSearch = search.startsWith('?') ? search.slice(1) : search;
+            // Chuẩn hóa các dấu "?" thừa thãi thành "&" (người dùng hay dán sai URL)
+            const normalizedSearch = rawSearch.replace(/\?(?=[A-Za-z0-9_%\-]+=)/g, '&');
+            return new URLSearchParams(normalizedSearch);
+        }
 
-        function updateHeader(params) {
-            const fields = ['thang', 'nam', 'ndp', 'adp', 'mtb', 'hshc', 'ql', 'nth'];
+        function parseDataString(dataStr) {
+            const map = { temp: {}, hum: {}, sign: {} };
+            if (!dataStr) return map;
+
+            // Tách bằng | hoặc &
+            const items = dataStr.split(/[|&]/);
+            items.forEach(item => {
+                const m = item.trim().match(/^(\d{1,2})([SC])_t(-?\d+)_a(\d+)_?(.+)?$/i);
+                if (m) {
+                    const day = Number(m[1]);
+                    const session = m[2].toLowerCase();
+                    const temp = Number(m[3]);
+                    const hum = Number(m[4]);
+                    const sign = m[5] || '';
+
+                    const key = `d${day}${session}`;
+                    map.temp[key] = temp;
+                    map.hum[key] = hum;
+                    map.sign[key] = sign;
+                }
+            });
+            return map;
+        }
+
+        function updateHeader(params, dataMap) {
+            // Xử lý Tháng/Năm từ tham số thang=2026/05
+            const rawThang = params.get('thang');
+            if (rawThang && rawThang.includes('/')) {
+                const parts = rawThang.split('/');
+                document.getElementById('thang-ui').textContent = parts[1];
+                document.getElementById('nam-ui').textContent = parts[0];
+            } else {
+                const fields = ['thang', 'nam'];
+                fields.forEach(f => {
+                    const el = document.getElementById(f + '-ui');
+                    if (el && params.get(f)) el.textContent = params.get(f);
+                });
+            }
+
+            const fields = ['ndp', 'adp', 'mtb', 'hshc', 'ql', 'nth'];
             fields.forEach(f => {
                 const el = document.getElementById(f + '-ui');
                 if (el && params.get(f)) el.textContent = params.get(f);
             });
-            // Update footer as well
+
+            // Cập nhật người thực hiện footer
             const footerNth = document.getElementById('nth-footer-ui');
             if (footerNth && params.get('nth')) footerNth.textContent = params.get('nth');
 
-            // Update signature cells from nth1s, nth1c...
+            // Cập nhật chữ ký từ dataMap hoặc tham số rời
             for (let d = 1; d <= 31; d++) {
                 ['s', 'c'].forEach(s => {
                     const el = document.getElementById(`nth-${d}-${s}`);
-                    const val = params.get(`nth${d}${s}`);
-                    if (el && val) el.textContent = val;
+                    if (!el) return;
+                    const val = dataMap.sign[`d${d}${s}`] || params.get(`nth${d}${s}`);
+                    if (val) el.textContent = val;
                 });
             }
         }
@@ -308,7 +354,7 @@
             };
         }
 
-        function drawPlot(params) {
+        function drawPlot(params, dataMap) {
             const svg = document.getElementById('svg-layer');
             const container = document.getElementById('chart-area');
             svg.setAttribute('viewBox', `0 0 ${container.clientWidth} ${container.clientHeight}`);
@@ -316,15 +362,18 @@
 
             const tempPoints = [], humPoints = [];
             for (let d = 1; d <= 31; d++) {
-                const ts = params.get(`t${d}s`) || params.get(`t${d}_s`);
-                const tc = params.get(`t${d}c`) || params.get(`t${d}_c`);
-                const hs = params.get(`h${d}s`) || params.get(`h${d}_s`) || params.get(`a${d}s`) || params.get(`a${d}_s`);
-                const hc = params.get(`h${d}c`) || params.get(`h${d}_c`) || params.get(`a${d}c`) || params.get(`a${d}_c`);
+                ['s', 'c'].forEach(session => {
+                    const key = `d${d}${session}`;
+                    const tVal = dataMap.temp[key] || params.get(`t${d}${session}`) || params.get(`t${d}_${session}`);
+                    const hVal = dataMap.hum[key] || params.get(`h${d}${session}`) || params.get(`h${d}_${session}`) || params.get(`a${d}${session}`) || params.get(`a${d}_${session}`);
 
-                if (ts) addPoint(tempPoints, d, 's', Math.round(TEMP_MAX - ts), container);
-                if (tc) addPoint(tempPoints, d, 'c', Math.round(TEMP_MAX - tc), container);
-                if (hs) addPoint(humPoints, d, 's', Math.round((HUM_MAX - hs) / 5), container);
-                if (hc) addPoint(humPoints, d, 'c', Math.round((HUM_MAX - hc) / 5), container);
+                    if (tVal !== undefined && tVal !== null) {
+                        addPoint(tempPoints, d, session, Math.round(TEMP_MAX - tVal), container);
+                    }
+                    if (hVal !== undefined && hVal !== null) {
+                        addPoint(humPoints, d, session, Math.round((HUM_MAX - hVal) / 5), container);
+                    }
+                });
             }
             renderPath(svg, tempPoints, 'var(--temp-line)');
             renderPath(svg, humPoints, 'var(--hum-line)');
@@ -357,12 +406,27 @@
         }
 
         function redraw() {
+            const params = getParams();
+
+            // Gom tất cả các mục dữ liệu từ URL (hỗ trợ cả data=A|B|C và data=A&B&C)
+            let dataEntries = [];
+            for (const [key, value] of params.entries()) {
+                if (key === 'data') {
+                    dataEntries.push(value);
+                } else if (/^\d{1,2}[SC]_t/i.test(key)) {
+                    // Nếu key bắt đầu bằng 11C_t... thì coi như đó là 1 item dữ liệu
+                    dataEntries.push(key + (value ? '=' + value : ''));
+                }
+            }
+
+            const dataMap = parseDataString(dataEntries.join('|'));
+            updateHeader(params, dataMap);
             requestAnimationFrame(() => {
-                requestAnimationFrame(() => drawPlot(getParams()));
+                requestAnimationFrame(() => drawPlot(params, dataMap));
             });
         }
 
-        window.onload = () => { updateHeader(getParams()); redraw(); };
+        window.onload = redraw;
         window.onresize = redraw;
     </script>
 </body>
