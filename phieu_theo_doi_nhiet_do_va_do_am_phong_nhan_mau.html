@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phiếu theo dõi nhiệt độ và độ ẩm phòng nhận mẫu</title>
+    <style>
+        :root {
+            --border: #000;
+            --grid: #999;
+            --text: #000;
+            --paper: #fff;
+            --temp-line: #0056b3;
+            --hum-line: #d32f2f;
+            --font: "Segoe UI", Roboto, Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: #f0f2f5;
+            font-family: var(--font);
+            color: var(--text);
+        }
+
+        .page {
+            width: 297mm;
+            min-height: 210mm;
+            margin: 10px auto;
+            background: var(--paper);
+            padding: 5mm;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 20px;
+            text-transform: uppercase;
+            text-decoration: underline;
+            font-weight: bold;
+        }
+
+        .meta-top {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            margin-bottom: 2px;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .dots {
+            border-bottom: 1px dotted #000;
+            display: inline-block;
+            min-width: 40px;
+            padding: 0 5px;
+            font-weight: bold;
+        }
+
+        .chart-container {
+            position: relative;
+            border: 2px solid var(--border);
+            margin-top: 2px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        th,
+        td {
+            border: 1px solid var(--grid);
+            text-align: center;
+            font-size: 9px;
+            padding: 0;
+            height: 19px;
+        }
+
+        .day-header {
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .sub-header {
+            font-size: 8px;
+            font-weight: normal;
+        }
+
+        /* Axis labels */
+        .axis-cell {
+            width: 32px;
+            font-weight: bold;
+        }
+
+        .temp-val {
+            color: #000;
+        }
+
+        .hum-val {
+            color: #d32f2f;
+        }
+
+        tr.heavy-border td {
+            border-bottom: 2px solid #000;
+        }
+
+        .svg-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .footer {
+            margin-top: 10px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+        }
+
+        .footer-info {
+            display: flex;
+            gap: 20px;
+            font-size: 11px;
+        }
+
+        .print-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #1d4ed8;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 100;
+        }
+
+        @media print {
+            body {
+                background: none;
+            }
+
+            .page {
+                margin: 0;
+                box-shadow: none;
+                border: none;
+                width: 100%;
+                padding: 2mm;
+            }
+
+            .print-btn {
+                display: none;
+            }
+
+            @page {
+                size: A4 landscape;
+                margin: 0;
+            }
+
+            th,
+            td {
+                height: 18px;
+                font-size: 8px;
+            }
+
+            .day-header {
+                font-size: 10px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="page">
+        <div class="header">
+            <h1>PHIẾU THEO DÕI NHIỆT ĐỘ VÀ ẨM ĐỘ NHẬN MẪU</h1>
+        </div>
+
+        <div class="meta-top">
+            <div>Nhiệt độ phòng: <span class="dots" id="ndp-ui">21-26°C</span></div>
+            <div>Ẩm độ: <span class="dots" id="adp-ui">≤ 70%</span></div>
+            <div>Mã nhiệt ẩm kế: <span class="dots" id="mtb-ui">HE-sp-003</span></div>
+            <div>Hệ số hiệu chính: <span class="dots" id="hshc-ui">..........</span></div>
+            <div style="background: yellow;">Tháng: <span class="dots" id="thang-ui">...</span> Năm: <span class="dots"
+                    id="nam-ui">...</span></div>
+            <div>Người quản lý: <span class="dots" id="ql-ui">TAN006</span></div>
+        </div>
+
+        <div class="chart-container" id="chart-area">
+            <svg class="svg-overlay" id="svg-layer"></svg>
+            <table id="data-table">
+                <thead>
+                    <tr>
+                        <th colspan="2" class="day-header" style="width: 64px;">Ngày</th>
+                        <script>
+                            for (let i = 1; i <= 31; i++) {
+                                document.write(`<th colspan="2" class="day-header">${i}</th>`);
+                            }
+                        </script>
+                    </tr>
+                    <tr>
+                        <th class="sub-header">T ºC</th>
+                        <th class="sub-header" style="color: red;">Ẩm độ %</th>
+                        <script>
+                            for (let i = 1; i <= 31; i++) {
+                                document.write(`<th class="sub-header">S</th><th class="sub-header">C</th>`);
+                            }
+                        </script>
+                    </tr>
+                </thead>
+                <tbody>
+                    <script>
+                        const tempScale = [32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15];
+                        const humScale = [100, 95, 90, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30, 25, 20, 15];
+
+                        for (let i = 0; i < tempScale.length; i++) {
+                            let rowClass = (tempScale[i] === 26 || tempScale[i] === 20) ? "heavy-border" : "";
+                            document.write(`<tr class="${rowClass}">`);
+                            document.write(`<td class="axis-cell temp-val">${tempScale[i]}</td>`);
+                            document.write(`<td class="axis-cell hum-val">${humScale[i]}</td>`);
+                            for (let j = 1; j <= 31; j++) {
+                                document.write(`<td class="grid-cell" data-day="${j}" data-session="s" data-row="${i}"></td>`);
+                                document.write(`<td class="grid-cell" data-day="${j}" data-session="c" data-row="${i}"></td>`);
+                            }
+                            document.write(`</tr>`);
+                        }
+                    </script>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="footer">
+            <div class="footer-info">
+                <div><b>Người thực hiện:</b> .......................</div>
+                <div>Thời gian ghi nhiệt độ và ẩm độ: Thứ 2, 3, 4, 5, 6, 7, CN</div>
+                <div><b>Chấm màu xanh: nhiệt độ - Chấm màu đỏ: ẩm độ</b></div>
+                <div><b>S (Sáng) 7:30-8:00, C (Chiều) 15:30-16:00</b></div>
+            </div>
+        </div>
+
+        <div style="margin-top: 5px; font-size: 12px;">
+            GHI CHÚ: <span class="dots" style="width: 80%;"></span>
+        </div>
+    </div>
+
+    <button class="print-btn" onclick="window.print()">IN PHIẾU</button>
+
+    <script>
+        const TEMP_MAX = 32, HUM_MAX = 100;
+
+        function getParams() { return new URLSearchParams(window.location.search); }
+
+        function updateHeader(params) {
+            const fields = ['thang', 'nam', 'ndp', 'adp', 'mtb', 'hshc', 'ql'];
+            fields.forEach(f => {
+                const el = document.getElementById(f + '-ui');
+                if (el && params.get(f)) el.textContent = params.get(f);
+            });
+        }
+
+        function getCellCenter(cell, container) {
+            const cellRect = cell.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+            return {
+                x: (cellRect.left - containerRect.left) + cellRect.width / 2,
+                y: (cellRect.top - containerRect.top) + cellRect.height / 2
+            };
+        }
+
+        function drawPlot(params) {
+            const svg = document.getElementById('svg-layer');
+            const container = document.getElementById('chart-area');
+            svg.setAttribute('viewBox', `0 0 ${container.clientWidth} ${container.clientHeight}`);
+            svg.innerHTML = '';
+
+            const tempPoints = [], humPoints = [];
+            for (let d = 1; d <= 31; d++) {
+                const ts = params.get(`t${d}s`) || params.get(`t${d}_s`);
+                const tc = params.get(`t${d}c`) || params.get(`t${d}_c`);
+                const hs = params.get(`h${d}s`) || params.get(`h${d}_s`) || params.get(`a${d}s`) || params.get(`a${d}_s`);
+                const hc = params.get(`h${d}c`) || params.get(`h${d}_c`) || params.get(`a${d}c`) || params.get(`a${d}_c`);
+
+                if (ts) addPoint(tempPoints, d, 's', Math.round(TEMP_MAX - ts), container);
+                if (tc) addPoint(tempPoints, d, 'c', Math.round(TEMP_MAX - tc), container);
+                if (hs) addPoint(humPoints, d, 's', Math.round((HUM_MAX - hs) / 5), container);
+                if (hc) addPoint(humPoints, d, 'c', Math.round((HUM_MAX - hc) / 5), container);
+            }
+            renderPath(svg, tempPoints, 'var(--temp-line)');
+            renderPath(svg, humPoints, 'var(--hum-line)');
+        }
+
+        function addPoint(arr, d, session, r, container) {
+            const rowIndex = Math.max(0, Math.min(17, r));
+            const cell = document.querySelector(`td[data-day="${d}"][data-session="${session}"][data-row="${rowIndex}"]`);
+            if (cell) arr.push(getCellCenter(cell, container));
+        }
+
+        function renderPath(svg, points, color) {
+            if (points.length === 0) return;
+            const ns = "http://www.w3.org/2000/svg";
+            if (points.length > 1) {
+                const path = document.createElementNS(ns, "polyline");
+                path.setAttribute("fill", "none");
+                path.setAttribute("stroke", color);
+                path.setAttribute("stroke-width", "1.5");
+                path.setAttribute("stroke-linecap", "round");
+                path.setAttribute("stroke-linejoin", "round");
+                path.setAttribute("points", points.map(p => `${p.x},${p.y}`).join(' '));
+                svg.appendChild(path);
+            }
+            points.forEach(p => {
+                const dot = document.createElementNS(ns, "circle");
+                dot.setAttribute("cx", p.x); dot.setAttribute("cy", p.y); dot.setAttribute("r", "2.5");
+                dot.setAttribute("fill", color); svg.appendChild(dot);
+            });
+        }
+
+        function redraw() {
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => drawPlot(getParams()));
+            });
+        }
+
+        window.onload = () => { updateHeader(getParams()); redraw(); };
+        window.onresize = redraw;
+    </script>
+</body>
+
+</html>
