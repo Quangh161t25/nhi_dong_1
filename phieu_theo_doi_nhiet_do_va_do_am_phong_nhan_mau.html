@@ -192,7 +192,7 @@
 
     <div class="page">
         <div class="header">
-            <h1>PHIẾU THEO DÕI NHIỆT ĐỘ VÀ ẨM ĐỘ NHẬN MẪU</h1>
+            <h1 id="tu-ui">PHIẾU THEO DÕI NHIỆT ĐỘ VÀ ẨM ĐỘ NHẬN MẪU</h1>
         </div>
 
         <div class="meta-top">
@@ -310,6 +310,13 @@
         }
 
         function updateHeader(params, dataMap) {
+            const titleEl = document.getElementById('tu-ui');
+            const titleText = params.get('tu');
+            if (titleEl && titleText) {
+                titleEl.textContent = titleText.toLocaleUpperCase('vi-VN');
+                document.title = titleEl.textContent;
+            }
+
             // Xử lý Tháng/Năm từ tham số thang=2026/05
             const rawThang = params.get('thang');
             if (rawThang && rawThang.includes('/')) {
