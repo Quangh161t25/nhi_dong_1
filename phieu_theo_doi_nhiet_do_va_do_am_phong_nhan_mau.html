@@ -1,441 +1,241 @@
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Phiếu theo dõi nhiệt độ và độ ẩm phòng nhận mẫu</title>
+    <title>Phiếu Theo Dõi Nhiệt Độ - Bệnh Viện Nhi Đồng 1</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        :root {
-            --border: #000;
-            --grid: #999;
-            --text: #000;
-            --paper: #fff;
-            --temp-line: #d32f2f;
-            --hum-line: #0056b3;
-            --font: "Segoe UI", Roboto, Arial, sans-serif;
-        }
-
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            margin: 0;
-            background: #f0f2f5;
-            font-family: var(--font);
-            color: var(--text);
-        }
-
-        .page {
-            width: 297mm;
-            min-height: 210mm;
-            margin: 10px auto;
-            background: var(--paper);
-            padding: 5mm;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 2px;
-        }
-
-        .header h1 {
-            margin: 0;
-            font-size: 20px;
-            text-transform: uppercase;
-            text-decoration: underline;
-            font-weight: bold;
-        }
-
-        .meta-top {
-            display: flex;
-            justify-content: space-between;
-            font-size: 12px;
-            margin-bottom: 2px;
-            flex-wrap: wrap;
-            gap: 5px;
-        }
-
-        .dots {
-            border-bottom: 1px dotted #000;
-            display: inline-block;
-            min-width: 40px;
-            padding: 0 5px;
-            font-weight: bold;
-        }
-
-        .chart-container {
-            position: relative;
-            border: 2px solid var(--border);
-            margin-top: 2px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            table-layout: fixed;
-        }
-
-        th,
-        td {
-            border: 1px solid var(--grid);
-            text-align: center;
-            font-size: 9px;
-            padding: 0;
-            height: 19px;
-        }
-
-        .day-header {
-            font-size: 11px;
-            font-weight: bold;
-        }
-
-        .sub-header {
-            font-size: 8px;
-            font-weight: normal;
-        }
-
-        /* Axis labels */
-        .axis-cell {
-            width: 32px;
-            font-weight: bold;
-        }
-
-        .temp-val {
-            color: #d32f2f;
-        }
-
-        .hum-val {
-            color: #0056b3;
-        }
-
-        tr.heavy-border td {
-            border-bottom: 2px solid #000;
-        }
-
-        .svg-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 10;
-        }
-
-        .footer {
-            margin-top: 10px;
-            display: flex;
-            justify-content: space-between;
-            font-size: 12px;
-        }
-
-        .footer-info {
-            display: flex;
-            gap: 20px;
-            font-size: 11px;
-        }
-
-        .print-btn {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: #1d4ed8;
-            color: #fff;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            z-index: 100;
-        }
-
         @media print {
-            body {
-                background: none;
-            }
-
-            .page {
-                margin: 0;
-                box-shadow: none;
-                border: none;
-                width: 100%;
-                padding: 2mm;
-            }
-
-            .print-btn {
-                display: none;
-            }
-
-            @page {
-                size: A4 landscape;
-                margin: 0;
-            }
-
-            th,
-            td {
-                height: 18px;
-                font-size: 8px;
-            }
-
-            .day-header {
-                font-size: 10px;
-            }
+            .no-print { display: none; }
+            body { background: white; }
+            .page-break { page-break-after: always; }
         }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #333; padding: 4px; text-align: center; font-size: 12px; }
+        .header-info { margin-bottom: 20px; }
+        .header-title { text-align: center; font-weight: bold; font-size: 16px; margin: 10px 0; text-transform: uppercase; }
+        .rotated-text { writing-mode: vertical-rl; transform: rotate(180deg); }
     </style>
 </head>
+<body class="bg-gray-100 p-4 font-sans">
 
-<body>
+    <div class="max-w-5xl mx-auto space-y-12">
+        
+        <!-- BẢNG 1: TỦ LẠNH 2-8°C -->
+        <section class="bg-white p-6 shadow-lg rounded-lg page-break">
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <h3 class="font-bold">Bệnh viện Nhi Đồng 1</h3>
+                    <p class="text-sm">Ban QLCLXN</p>
+                    <p class="text-sm">Khoa Xét nghiệm Huyết Học</p>
+                </div>
+                <div class="text-right text-xs">
+                    <p>FM-EQ-HE-002 V3.0</p>
+                    <p>Ngày hiệu lực: 01/05/2020</p>
+                </div>
+            </div>
 
-    <div class="page">
-        <div class="header">
-            <h1 id="tu-ui">PHIẾU THEO DÕI NHIỆT ĐỘ VÀ ẨM ĐỘ NHẬN MẪU</h1>
-        </div>
+            <h1 class="header-title">PHIẾU THEO DÕI NHIỆT ĐỘ TỦ LẠNH TRỮ HÓA CHẤT 2-8°C</h1>
 
-        <div class="meta-top">
-            <div>Nhiệt độ phòng: <span class="dots" id="ndp-ui" style="color: #d32f2f;">21-26°C</span></div>
-            <div>Ẩm độ: <span class="dots" id="adp-ui" style="color: #0056b3;">≤ 70%</span></div>
-            <div>Mã nhiệt ẩm kế: <span class="dots" id="mtb-ui">HE-sp-003</span></div>
-            <div>Hệ số hiệu chính: <span class="dots" id="hshc-ui">..........</span></div>
-            <div style="background: yellow;">Tháng: <span class="dots" id="thang-ui">...</span> Năm: <span class="dots"
-                    id="nam-ui">...</span></div>
-            <div>Người quản lý: <span class="dots" id="ql-ui">TAN006</span></div>
-        </div>
+            <div class="grid grid-cols-2 gap-4 mb-4 text-sm">
+                <p><strong>Loại tủ:</strong> SANYO MAR 304</p>
+                <p><strong>Mã thiết bị:</strong> Hem...008</p>
+                <p><strong>Mã nhiệt kế:</strong> -010</p>
+                <p><strong>Tháng/Năm:</strong> ...../2026</p>
+            </div>
 
-        <div class="chart-container" id="chart-area">
-            <svg class="svg-overlay" id="svg-layer"></svg>
-            <table id="data-table">
+            <table>
                 <thead>
-                    <tr>
-                        <th colspan="2" class="day-header" style="width: 64px;">Ngày</th>
+                    <tr class="bg-gray-50">
+                        <th rowspan="2" class="w-12">Nhiệt độ</th>
+                        <th colspan="31">Ngày trong tháng</th>
+                    </tr>
+                    <tr class="bg-gray-50">
+                        <!-- Tạo 15 cột ngày như trang 1 -->
                         <script>
-                            for (let i = 1; i <= 31; i++) {
-                                document.write(`<th colspan="2" class="day-header">${i}</th>`);
-                            }
+                            for(let i=1; i<=15; i++) document.write(`<th colspan="2">${i}</th>`);
                         </script>
                     </tr>
-                    <tr>
-                        <th class="sub-header" style="color: #d32f2f;">T ºC</th>
-                        <th class="sub-header" style="color: #0056b3;">Ẩm độ %</th>
+                    <tr class="bg-gray-50">
+                        <th>Buổi</th>
                         <script>
-                            for (let i = 1; i <= 31; i++) {
-                                document.write(`<th class="sub-header">S</th><th class="sub-header">C</th>`);
-                            }
+                            for(let i=1; i<=15; i++) document.write(`<th>S</th><th>C</th>`);
                         </script>
                     </tr>
                 </thead>
                 <tbody>
                     <script>
-                        const tempScale = [32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15];
-                        const humScale = [100, 95, 90, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30, 25, 20, 15];
-
-                        for (let i = 0; i < tempScale.length; i++) {
-                            let rowClass = (tempScale[i] === 27 || tempScale[i] === 21) ? "heavy-border" : "";
-                            document.write(`<tr class="${rowClass}">`);
-                            document.write(`<td class="axis-cell temp-val">${tempScale[i]}</td>`);
-                            document.write(`<td class="axis-cell hum-val">${humScale[i]}</td>`);
-                            for (let j = 1; j <= 31; j++) {
-                                document.write(`<td class="grid-cell" data-day="${j}" data-session="s" data-row="${i}"></td>`);
-                                document.write(`<td class="grid-cell" data-day="${j}" data-session="c" data-row="${i}"></td>`);
-                            }
+                        for(let temp=8; temp>=2; temp--) {
+                            document.write(`<tr><td class="font-bold">${temp}°C</td>`);
+                            for(let i=1; i<=30; i++) document.write(`<td></td>`);
                             document.write(`</tr>`);
                         }
                     </script>
-                    <tr style="height: 38px; background: #fdfdfd;">
-                        <td colspan="2" style="font-weight: bold; font-size: 10px;">Ký tên</td>
+                    <tr>
+                        <td class="font-bold">Ký tên</td>
                         <script>
-                            for (let j = 1; j <= 31; j++) {
-                                document.write(`<td id="nth-${j}-s" style="font-size: 8px; writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; padding: 2px 0;"></td>`);
-                                document.write(`<td id="nth-${j}-c" style="font-size: 8px; writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; padding: 2px 0;"></td>`);
-                            }
+                            for(let i=1; i<=30; i++) document.write(`<td class="h-8"></td>`);
                         </script>
                     </tr>
                 </tbody>
             </table>
-        </div>
+            <p class="mt-2 text-xs italic text-gray-600">* S (Sáng): 8:00, C (Chiều): 16:00</p>
+        </section>
 
-        <div class="footer">
-            <div class="footer-info">
-                <div><b>Người thực hiện:</b> <span id="nth-footer-ui"
-                        style="font-weight: bold;">.......................</span></div>
-                <div>Thời gian ghi nhiệt độ và ẩm độ: Thứ 2, 3, 4, 5, 6, 7, CN</div>
-                <div><b>Chấm màu đỏ: nhiệt độ - Chấm màu xanh: ẩm độ</b></div>
-                <div><b>S (Sáng) 7:30-8:00, C (Chiều) 15:30-16:00</b></div>
+        <!-- BẢNG 2: TỦ ÂM SÂU -70°C -->
+        <section class="bg-white p-6 shadow-lg rounded-lg page-break">
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <h3 class="font-bold">Bệnh viện Nhi Đồng 1</h3>
+                    <p class="text-sm">Ban QLCLXN</p>
+                </div>
+                <div class="text-right text-xs">
+                    <p>FM-EQ-AL-003/3 V3.0</p>
+                    <p>Ngày hiệu lực: 01/01/2020</p>
+                </div>
             </div>
-        </div>
 
-        <div style="margin-top: 5px; font-size: 12px;">
-            GHI CHÚ: <span class="dots" style="width: 80%;"></span>
-        </div>
+            <h1 class="header-title">PHIẾU THEO DÕI NHIỆT ĐỘ TỦ ÂM SÂU (-70°C)</h1>
+
+            <div class="grid grid-cols-2 gap-4 mb-4 text-sm">
+                <p><strong>Mã thiết bị:</strong> ........ 047</p>
+                <p><strong>Tháng:</strong> 04 <strong>Năm:</strong> 2026</p>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-max">
+                    <thead>
+                        <tr class="bg-gray-50">
+                            <th rowspan="2">Ngày</th>
+                            <script>
+                                for(let i=1; i<=31; i++) document.write(`<th colspan="2">${i}</th>`);
+                            </script>
+                        </tr>
+                        <tr class="bg-gray-50">
+                            <script>
+                                for(let i=1; i<=31; i++) document.write(`<th>S</th><th>C</th>`);
+                            </script>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <script>
+                            const temps = [-65, -70, -75, -80, -85];
+                            temps.forEach(t => {
+                                document.write(`<tr><td class="font-bold bg-gray-50">${t}</td>`);
+                                for(let i=1; i<=62; i++) document.write(`<td></td>`);
+                                document.write(`</tr>`);
+                            });
+                        </script>
+                        <tr>
+                            <td class="font-bold bg-gray-50">Ký tên</td>
+                            <script>
+                                for(let i=1; i<=62; i++) document.write(`<td class="h-8"></td>`);
+                            </script>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="mt-2 text-xs italic text-gray-600">* S: 7:30-8:00, C: 15:30-16:00</p>
+        </section>
+
+        <!-- BẢNG 3: BẢO TRÌ TỦ LẠNH -->
+        <section class="bg-white p-6 shadow-lg rounded-lg">
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <h3 class="font-bold text-red-600 text-lg">TÀI LIỆU GỐC</h3>
+                    <h3 class="font-bold">Bệnh viện Nhi Đồng 1</h3>
+                    <p class="text-sm">Khoa Xét nghiệm Huyết học</p>
+                </div>
+                <div class="text-right text-xs">
+                    <p>FM-EQ-HE-005 V4.0</p>
+                    <p>Ngày hiệu lực: 01/05/2024</p>
+                </div>
+            </div>
+
+            <h1 class="header-title">PHIẾU BẢO TRÌ TỦ LẠNH TỦ ÂM - THÁNG 2/2026</h1>
+
+            <table class="mb-6">
+                <thead>
+                    <tr class="bg-gray-100">
+                        <th class="w-10">STT</th>
+                        <th class="text-left px-2">Nội dung bảo dưỡng hàng ngày</th>
+                        <script>
+                            for(let i=1; i<=31; i++) document.write(`<th class="w-6">${i}</th>`);
+                        </script>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td class="text-left px-2">Kiểm tra và ghi nhận nhiệt độ tủ lạnh</td>
+                        <script>for(let i=1; i<=31; i++) document.write(`<td>✓</td>`);</script>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td class="text-left px-2">Kiểm tra và sắp xếp ngăn nắp sản phẩm</td>
+                        <script>for(let i=1; i<=31; i++) document.write(`<td></td>`);</script>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td class="text-left px-2">Kiểm tra thăng bằng, cách tường 5-8cm</td>
+                        <script>for(let i=1; i<=31; i++) document.write(`<td></td>`);</script>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 class="font-bold text-sm mb-2 uppercase">Bảo dưỡng hàng tuần (Người sử dụng thực hiện)</h2>
+            <table class="mb-4">
+                <thead>
+                    <tr class="bg-gray-100">
+                        <th class="w-1/4">Thời gian</th>
+                        <th>Nội dung thực hiện</th>
+                        <th class="w-1/4">Người thực hiện</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Tuần 1 (Ngày....)</td>
+                        <td class="text-left px-4">Kiểm tra đóng tuyết, xả đá, vệ sinh roong cửa.</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>Tuần 2 (Ngày....)</td>
+                        <td class="text-left px-4">Kiểm tra đóng tuyết, xả đá, vệ sinh roong cửa.</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>Tuần 3 (Ngày....)</td>
+                        <td class="text-left px-4">Kiểm tra đóng tuyết, xả đá, vệ sinh roong cửa.</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>Tuần 4 (Ngày....)</td>
+                        <td class="text-left px-4">Kiểm tra đóng tuyết, xả đá, vệ sinh roong cửa.</td>
+                        <td></td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div class="flex justify-between mt-8 text-sm px-10">
+                <div class="text-center">
+                    <p>Người thực hiện</p>
+                    <div class="h-16"></div>
+                </div>
+                <div class="text-center">
+                    <p>Trưởng bộ phận</p>
+                    <div class="h-16"></div>
+                </div>
+            </div>
+        </section>
+
     </div>
 
-    <button class="print-btn" onclick="window.print()">IN PHIẾU</button>
+    <div class="no-print fixed bottom-4 right-4">
+        <button onclick="window.print()" class="bg-blue-600 text-white px-6 py-2 rounded-full shadow-lg hover:bg-blue-700 transition">
+            In Phiếu
+        </button>
+    </div>
 
-    <script>
-        const TEMP_MAX = 32, HUM_MAX = 100;
-
-        function getParams() {
-            const search = window.location.search || '';
-            const rawSearch = search.startsWith('?') ? search.slice(1) : search;
-            // Chuẩn hóa các dấu "?" thừa thãi thành "&" (người dùng hay dán sai URL)
-            const normalizedSearch = rawSearch.replace(/\?(?=[A-Za-z0-9_%\-]+=)/g, '&');
-            return new URLSearchParams(normalizedSearch);
-        }
-
-        function parseDataString(dataStr) {
-            const map = { temp: {}, hum: {}, sign: {} };
-            if (!dataStr) return map;
-
-            // Tách bằng | hoặc &
-            const items = dataStr.split(/[|&]/);
-            items.forEach(item => {
-                const m = item.trim().match(/^(\d{1,2})([SC])_t(-?\d+)_a(\d+)_?(.+)?$/i);
-                if (m) {
-                    const day = Number(m[1]);
-                    const session = m[2].toLowerCase();
-                    const temp = Number(m[3]);
-                    const hum = Number(m[4]);
-                    const sign = m[5] || '';
-
-                    const key = `d${day}${session}`;
-                    map.temp[key] = temp;
-                    map.hum[key] = hum;
-                    map.sign[key] = sign;
-                }
-            });
-            return map;
-        }
-
-        function updateHeader(params, dataMap) {
-            const titleEl = document.getElementById('tu-ui');
-            const titleText = params.get('tu');
-            if (titleEl && titleText) {
-                titleEl.textContent = titleText.toLocaleUpperCase('vi-VN');
-                document.title = titleEl.textContent;
-            }
-
-            // Xử lý Tháng/Năm từ tham số thang=2026/05
-            const rawThang = params.get('thang');
-            if (rawThang && rawThang.includes('/')) {
-                const parts = rawThang.split('/');
-                document.getElementById('thang-ui').textContent = parts[1];
-                document.getElementById('nam-ui').textContent = parts[0];
-            } else {
-                const fields = ['thang', 'nam'];
-                fields.forEach(f => {
-                    const el = document.getElementById(f + '-ui');
-                    if (el && params.get(f)) el.textContent = params.get(f);
-                });
-            }
-
-            const fields = ['ndp', 'adp', 'mtb', 'hshc', 'ql', 'nth'];
-            fields.forEach(f => {
-                const el = document.getElementById(f + '-ui');
-                if (el && params.get(f)) el.textContent = params.get(f);
-            });
-
-            // Cập nhật người thực hiện footer
-            const footerNth = document.getElementById('nth-footer-ui');
-            if (footerNth && params.get('nth')) footerNth.textContent = params.get('nth');
-
-            // Cập nhật chữ ký từ dataMap hoặc tham số rời
-            for (let d = 1; d <= 31; d++) {
-                ['s', 'c'].forEach(s => {
-                    const el = document.getElementById(`nth-${d}-${s}`);
-                    if (!el) return;
-                    const val = dataMap.sign[`d${d}${s}`] || params.get(`nth${d}${s}`);
-                    if (val) el.textContent = val;
-                });
-            }
-        }
-
-        function getCellCenter(cell, container) {
-            const cellRect = cell.getBoundingClientRect();
-            const containerRect = container.getBoundingClientRect();
-            return {
-                x: (cellRect.left - containerRect.left) + cellRect.width / 2,
-                y: (cellRect.top - containerRect.top) + cellRect.height / 2
-            };
-        }
-
-        function drawPlot(params, dataMap) {
-            const svg = document.getElementById('svg-layer');
-            const container = document.getElementById('chart-area');
-            svg.setAttribute('viewBox', `0 0 ${container.clientWidth} ${container.clientHeight}`);
-            svg.innerHTML = '';
-
-            const tempPoints = [], humPoints = [];
-            for (let d = 1; d <= 31; d++) {
-                ['s', 'c'].forEach(session => {
-                    const key = `d${d}${session}`;
-                    const tVal = dataMap.temp[key] || params.get(`t${d}${session}`) || params.get(`t${d}_${session}`);
-                    const hVal = dataMap.hum[key] || params.get(`h${d}${session}`) || params.get(`h${d}_${session}`) || params.get(`a${d}${session}`) || params.get(`a${d}_${session}`);
-
-                    if (tVal !== undefined && tVal !== null) {
-                        addPoint(tempPoints, d, session, Math.round(TEMP_MAX - tVal), container);
-                    }
-                    if (hVal !== undefined && hVal !== null) {
-                        addPoint(humPoints, d, session, Math.round((HUM_MAX - hVal) / 5), container);
-                    }
-                });
-            }
-            renderPath(svg, tempPoints, 'var(--temp-line)');
-            renderPath(svg, humPoints, 'var(--hum-line)');
-        }
-
-        function addPoint(arr, d, session, r, container) {
-            const rowIndex = Math.max(0, Math.min(17, r));
-            const cell = document.querySelector(`td[data-day="${d}"][data-session="${session}"][data-row="${rowIndex}"]`);
-            if (cell) arr.push(getCellCenter(cell, container));
-        }
-
-        function renderPath(svg, points, color) {
-            if (points.length === 0) return;
-            const ns = "http://www.w3.org/2000/svg";
-            if (points.length > 1) {
-                const path = document.createElementNS(ns, "polyline");
-                path.setAttribute("fill", "none");
-                path.setAttribute("stroke", color);
-                path.setAttribute("stroke-width", "1.5");
-                path.setAttribute("stroke-linecap", "round");
-                path.setAttribute("stroke-linejoin", "round");
-                path.setAttribute("points", points.map(p => `${p.x},${p.y}`).join(' '));
-                svg.appendChild(path);
-            }
-            points.forEach(p => {
-                const dot = document.createElementNS(ns, "circle");
-                dot.setAttribute("cx", p.x); dot.setAttribute("cy", p.y); dot.setAttribute("r", "2.5");
-                dot.setAttribute("fill", color); svg.appendChild(dot);
-            });
-        }
-
-        function redraw() {
-            const params = getParams();
-
-            // Gom tất cả các mục dữ liệu từ URL (hỗ trợ cả data=A|B|C và data=A&B&C)
-            let dataEntries = [];
-            for (const [key, value] of params.entries()) {
-                if (key === 'data') {
-                    dataEntries.push(value);
-                } else if (/^\d{1,2}[SC]_t/i.test(key)) {
-                    // Nếu key bắt đầu bằng 11C_t... thì coi như đó là 1 item dữ liệu
-                    dataEntries.push(key + (value ? '=' + value : ''));
-                }
-            }
-
-            const dataMap = parseDataString(dataEntries.join('|'));
-            updateHeader(params, dataMap);
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => drawPlot(params, dataMap));
-            });
-        }
-
-        window.onload = redraw;
-        window.onresize = redraw;
-    </script>
 </body>
-
 </html>
