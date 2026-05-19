@@ -569,19 +569,9 @@
                             </div>
                         </div>
 
-                        <div class="pt-6 mt-4 mobile-sticky-footer"
-                            style="border-top:1.5px solid #ccfbf1; display: flex; gap: 10px;">
-                            <button type="button" onclick="openPrintReport()"
-                                class="w-1/3 text-white font-bold py-4 rounded-2xl shadow-lg transition-all active:scale-[0.98] flex justify-center items-center gap-2 text-base"
-                                style="background:linear-gradient(135deg,#64748b,#475569); box-shadow:0 6px 16px -4px rgba(71,85,105,0.3);">
-                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                                </svg>
-                                IN PHIẾU
-                            </button>
+                        <div class="pt-6 mt-4 mobile-sticky-footer" style="border-top:1.5px solid #ccfbf1;">
                             <button type="button" id="btnSubmit" onclick="submitData()"
-                                class="flex-1 text-white font-black py-4 rounded-2xl shadow-xl transition-all active:scale-[0.98] flex justify-center items-center gap-2 text-lg"
+                                class="w-full text-white font-black py-4 rounded-2xl shadow-xl transition-all active:scale-[0.98] flex justify-center items-center gap-2 text-lg"
                                 style="background:linear-gradient(135deg,#0f766e,#0d9488,#14b8a6); box-shadow:0 8px 24px -4px rgba(13,148,136,0.35);">
                                 <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
@@ -604,7 +594,16 @@
             serviceAccountEmail: "test-gia-ason@api-test-sheet-161.iam.gserviceaccount.com",
             privateKey: "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC3NN84hLTkQPZd\nLj7niXZTICq7nHsuTn3J6r2Paq12m70/lYSmrwh1i0EStr9bO19QM8cevGlslwGr\nWSVOLJlc6+w1HGPKvRXtA41kYV9MYIvpzIPQtkFE7Hxq71QyBARcv39Lfzze6Ioj\n3G8VBvAKFLAnCUr97GHRv+KbCTFxPZupd3PEB+xS5ZUlzdBCEZvDid3iXaaEJJ+l\nTd1apAGQHjtnDTLOkiTa8zf7X5ebALwnI9MziOdN8VyprHXGhkachPbKyrG0QwEs\n2jtiI6Y5ULsBPjNefoavH8MKU5DEAT9h0fZ7KfsKYVMDuXqmEKBs0D3B4Z6aDZQW\nwT2dDRZDAgMBAAECggEAEIuVoSzZVuFhaz1GI9ji0IacjvO50cIq7M8Zrj4/F756\nEw6PIhKENafAb7U4INm2AnzUMO8CqL9Jpxs85qUM3W4JysSByqLUiRW2184amIyb\nj7jCXfLBTQn8AbHgrUepl5d/vBmFYMgon/mqjbNiGDb4FZgEQSkie5o6fi/dWp5d\nNahbZl+WTOB/znhAfKh/zferHNxldR/ERmwOubZUerkqysWiBigc3ovpLSUof9ur\nz3hNPPp0CKQjF40xuQc6FYTHUHMLuMvp78PXuc/mYqQmZ8VOGhU+faGtZ4m+QJly\ndF5dS8U5cwKEF+ptuAUiWSahn6INb9yKn3+FcsW0UQKBgQDb8N4eWFvbgpRo/vxo\nwBN2u2TWubj6clcrq/1a+VR0njC28Can0ogJHhrFhPxVs5D/rugs3HlbyAXJFptY\nV0DZPCwBxGU5P5RbGjXWWEUXjp4ISKQD8WKfVlXNr79TqLdOg2NZBYQAi06Cpo/T\nPV9l7LSG2Tj/9WdvD7W2wvrpaQKBgQDVPjpJN6xh7+sHtSU0mjKvrqigpHbuSQ/o\nXpUaWSIpJffm5QpFPAOcTT5mHZCyllicJQIrfPSY+sH8n+sF03CUqVkV4Q2UqfOf\npFaLDB4P6SQ8iesZyF4VKFrj/cAvRJmp0e5W/DRnFkoEp+8c+nrru2+Dzm9kb7Uq\n0CiltqYAywKBgBtcfrV1to+7Ue0x84KwintV2rifyDRX7yI+tjkQFYKgf1zyyUxN\nc6D2vsvdvGqI+TvlrXqPPwW8/4NBrbeyux2LT8o0fYc+sp0WyKXOu2Gv21caelUH\nPYam/eultn6Y2Z0J2V0kw4Qx0GWOhQv5cZnDdb3k3iNxixmU8b03ynEpAoGBAKEA\n7O0fNe50QRZ+tOq0ihSPYQ55XrqnO3WNBDLynZJH8pbI1CpWF7vJrpVXOUs9rQWo\nA61mGR/wJMtiywaJEHWOL48PbzuR3jno0NcHfSMyOoPi9jlvSWncIFQH4TVPLF5F\n/Rh8L+ytrZE6YpWUoX6e9KGmGgDRPw5mQGpuL4RlAoGADe9n080SXlsUk4nHVjUz\nEfv7EBoBkgOpqb9T1foRfJl46NxmmTOYV3iGIhjwcDskEg284k4iq/gH6EEFyEBc\nVz13jzB1nBgjfezFesVQz7bA/+Wik6HZtxAxVg38BKMt+Q1tYw9wOjbGPqOn++VC\nsR2Sh8e3h3Knd6j1tceRIFU=\n-----END PRIVATE KEY-----\n",
             tokenUrl: "https://oauth2.googleapis.com/token",
-            scopes: ["https://www.googleapis.com/auth/spreadsheets"]
+            scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+            specialCabinets: [
+                "fiochetti eumotica 400",
+                "phcbi-a",
+                "phcbi-b",
+                "kw",
+                "panasonic mdf-137",
+                "thermo scientific",
+                "helmer pc100i"
+            ]
         };
 
         let usersData = [];
@@ -903,13 +902,18 @@
             if (!container) return;
             container.innerHTML = '';
 
-            // Check temperature range to determine button set
+            // Check if cabinet name is in special list or in plasma range
+            const tenTu = String(document.getElementById('input_ten').value).toLowerCase();
+            const isSpecialName = CONFIG.specialCabinets.some(s => tenTu.includes(s));
+
             const minVal = parseFloat(String(document.getElementById('input_nhiet_do_min').value).replace(',', '.'));
             const maxVal = parseFloat(String(document.getElementById('input_nhiet_do_max').value).replace(',', '.'));
             const isPlasmaRange = !isNaN(minVal) && !isNaN(maxVal) && minVal >= -35 && maxVal <= -25;
 
+            const use6Slots = isSpecialName || isPlasmaRange;
+
             let options;
-            if (isPlasmaRange) {
+            if (use6Slots) {
                 options = [
                     { id: 'L1', label: 'L1 7H' },
                     { id: 'L2', label: 'L2 11H' },
@@ -944,12 +948,15 @@
             const hr = new Date().getHours();
             let defaultVal = 'Sáng';
 
-            // Check temperature range from inputs
+            // Check if cabinet name is in special list or in plasma range
+            const tenTu = String(document.getElementById('input_ten').value).toLowerCase();
+            const isSpecialName = CONFIG.specialCabinets.some(s => tenTu.includes(s));
+
             const minVal = parseFloat(String(document.getElementById('input_nhiet_do_min').value).replace(',', '.'));
             const maxVal = parseFloat(String(document.getElementById('input_nhiet_do_max').value).replace(',', '.'));
             const isPlasmaRange = !isNaN(minVal) && !isNaN(maxVal) && minVal >= -35 && maxVal <= -25;
 
-            if (isPlasmaRange) {
+            if (isSpecialName || isPlasmaRange) {
                 if (hr >= 7 && hr < 11) defaultVal = 'L1';
                 else if (hr >= 11 && hr < 15) defaultVal = 'L2';
                 else if (hr >= 15 && hr < 19) defaultVal = 'L3';
@@ -1165,36 +1172,6 @@
                 btn.innerHTML = oriText;
                 btn.disabled = false;
             }
-        }
-
-        function openPrintReport() {
-            const tenTu = document.getElementById('input_ten').value;
-            const idTu = document.getElementById('input_id_tu').value;
-            if (!idTu) return alert("Vui lòng chọn Tủ trước khi in!");
-
-            const now = new Date();
-            const thang = now.getMonth() + 1;
-            const nam = now.getFullYear();
-            const nth = currentUser ? currentUser.name : '';
-
-            // Xác định mẫu in dựa trên tên tủ
-            let templateName = 'tu_2_8.html'; // Mặc định
-            if (tenTu.toLowerCase().includes('phòng nhận mẫu')) {
-                templateName = 'phieu_theo_doi_nhiet_do_va_do_am_phong_nhan_mau.html';
-            } else if (tenTu.toLowerCase().includes('âm sâu')) {
-                templateName = 'tu_am_sau.html';
-            }
-
-            const params = new URLSearchParams({
-                thang: thang,
-                nam: nam,
-                mtb: idTu,
-                tu: tenTu,
-                nth: nth,
-                ql: 'TAN006' // Giá trị mặc định từ mẫu in
-            });
-
-            window.open(`${templateName}?${params.toString()}`, '_blank');
         }
     </script>
 </body>
