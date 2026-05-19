@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phiếu theo dõi nhiệt độ tủ ủ mẫu Memmert</title>
+    <style>
+        :root {
+            --border: #000;
+            --grid: #000;
+            --text: #000;
+            --paper: #fff;
+            --line: #d64d4d;
+            --dot: #000;
+            --separator: #c0c0c0;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: #fdfdfd;
+            font-family: "Times New Roman", Times, serif;
+            color: var(--text);
+        }
+
+        .page {
+            width: 100%;
+            max-width: 1160px;
+            margin: 20px auto 40px auto;
+            /* Increased margin for visual separation */
+            background: var(--paper);
+            padding: 10px 15px;
+            position: relative;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            page-break-after: always;
+        }
+
+        .page:last-child {
+            page-break-after: auto;
+            margin-bottom: 20px;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 5px;
+        }
+
+        .header-left {
+            text-align: left;
+            line-height: 1.3;
+        }
+
+        .header-left p {
+            margin: 0;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .header-right-small {
+            text-align: right;
+            font-size: 12px;
+            font-weight: normal;
+        }
+
+        .header-center {
+            text-align: center;
+            margin: 10px 0 20px 0;
+        }
+
+        .header-center h1 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .header-center p {
+            margin: 2px 0 0 0;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .meta {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            font-size: 14px;
+            margin-bottom: 5px;
+            line-height: 1.4;
+        }
+
+        .meta-left {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .meta-right {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .meta p {
+            margin: 2px 0;
+            display: flex;
+            align-items: flex-end;
+            width: 100%;
+            gap: 5px;
+        }
+
+        .dots {
+            border-bottom: 1px dotted #000;
+            flex: 1;
+            display: inline-block;
+            height: 15px;
+            white-space: nowrap;
+            overflow: hidden;
+            line-height: 1;
+        }
+
+        .meta-left p,
+        .meta-right p {
+            white-space: nowrap;
+        }
+
+        .highlight-yellow {
+            background-color: yellow;
+            padding: 0 5px;
+            min-width: 100px;
+        }
+
+        .chart-wrap {
+            position: relative;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .chart-svg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        table {
+            width: 100.1%;
+            /* Slight overlap to hide double borders */
+            margin-left: -0.1%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            position: relative;
+            z-index: 1;
+        }
+
+        th,
+        td {
+            border: 1px solid var(--grid);
+            text-align: center;
+            padding: 0;
+            height: 22px;
+            font-size: 13px;
+            font-weight: normal;
+        }
+
+        thead th {
+            font-weight: normal;
+            background: #fff;
+        }
+
+        .col-label {
+            width: 60px;
+        }
+
+        .col-session {
+            width: 40px;
+        }
+
+        .separator-row td {
+            background-color: var(--separator);
+            height: 16px;
+        }
+
+        .footer-label {
+            width: 50px;
+            font-size: 11px;
+            padding: 2px;
+            line-height: 1.2;
+            vertical-align: middle;
+            background: #fff;
+        }
+
+        .signature-row {
+            height: 60px;
+            /* Increased for better signature space */
+        }
+
+        .manager-row-height {
+            height: 45px;
+        }
+
+        .manager-name {
+            font-size: 16px;
+            font-weight: bold;
+            vertical-align: middle;
+        }
+
+        .note-footer {
+            font-size: 13px;
+            margin-top: 8px;
+        }
+
+        .print-btn {
+            position: fixed;
+            right: 20px;
+            top: 20px;
+            background: #444;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            z-index: 100;
+            border-radius: 4px;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        @media print {
+            @page {
+                size: A4 landscape;
+                margin: 5mm;
+            }
+
+            .print-btn {
+                display: none;
+            }
+
+            .page {
+                width: 100%;
+                max-width: none;
+                margin: 0;
+                box-shadow: none;
+            }
+
+            .highlight-yellow {
+                background-color: yellow !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .separator-row td {
+                background-color: var(--separator) !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <button class="print-btn" onclick="printPage()">IN PHIẾU</button>
+
+    <div class="page" id="page-1">
+        <div class="header-top">
+            <div class="header-left">
+                <p>Bệnh viện Nhi Đồng 1</p>
+                <p>Ban QLCLXN</p>
+                <p>Khoa Xét nghiệm Huyết Học</p>
+            </div>
+            <div class="header-right-small">
+                PHIẾU THEO DÕI NHIỆT ĐỘ TỦ Ủ MẪU (MEMMERT) ( 37-56°C)
+            </div>
+        </div>
+        <div class="header-center">
+            <h1>PHIẾU THEO DÕI NHIỆT ĐỘ TỦ Ủ MẪU (MEMMERT) ( 37-56°C)</h1>
+            <p>(TRANG 1)</p>
+        </div>
+
+        <div class="meta">
+            <div class="meta-left">
+                <p>Tháng: <span class="dots" id="meta-m-1"></span></p>
+                <p>Người quản lý: <span id="meta-nql-1">NHN028</span></p>
+            </div>
+            <div class="meta-right">
+                <p>Mã nhiệt kế: <span class="dots" id="meta-mnk-1"></span></p>
+                <p>Hệ số hiệu chỉnh: <span class="dots" id="meta-hshc-1"></span></p>
+                <p>Mã thiết bị: <span id="meta-mtb-1">HE-cm-064</span></p>
+            </div>
+        </div>
+
+        <div class="chart-wrap" id="chart-wrap-1">
+            <svg class="chart-svg" id="chart-svg-1"></svg>
+            <table id="table-1">
+                <thead>
+                    <tr>
+                        <th class="col-label">Ngày</th>
+                        <th colspan="2">1</th>
+                        <th colspan="2">2</th>
+                        <th colspan="2">3</th>
+                        <th colspan="2">4</th>
+                        <th colspan="2">5</th>
+                        <th colspan="2">6</th>
+                        <th colspan="2">7</th>
+                        <th colspan="2">8</th>
+                        <th colspan="2">9</th>
+                        <th colspan="2">10</th>
+                        <th colspan="2">11</th>
+                        <th colspan="2">12</th>
+                        <th colspan="2">13</th>
+                        <th colspan="2">14</th>
+                        <th colspan="2">15</th>
+                    </tr>
+                    <tr>
+                        <th class="col-session">To</th>
+                        <th>S</th>
+                        <th>C</th>
+                        <th>S</th>
+                        <th>C</th>
+                        <th>S</th>
+                        <th>C</th>
+                        <th>S</th>
+                        <th>C</th>
+                        <th>S</th>
+                        <th>C</th>
+                        <th>S</th>
+                        <th>C</th>
+                        <th>S</th>
+                        <th>C</th>
+                        <th>S</th>
+                        <th>C</th>
+                        <th>S</th>
+                        <th>C</th>
+                        <th>S</th>
+                        <th>C</th>
+                        <th>S</th>
+                        <th>C</th>
+                        <th>S</th>
+                        <th>C</th>
+                        <th>S</th>
+                        <th>C</th>
+                        <th>S</th>
+                        <th>C</th>
+                        <th>S</th>
+                        <th>C</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-1"></tbody>
+                <tbody id="signature-tbody-1"></tbody>
+                <tfoot>
+                    <tr class="manager-row-height">
+                        <td class="footer-label">Trưởng bộ phận</td>
+                        <td colspan="30" class="manager-name" id="manager-row-1">NHN028</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        <div class="note-footer" id="note-1">S (Sáng) 8:00, C (Chiều) 16:00</div>
+    </div>
+
+    <!-- Page 2 for days 16-31 -->
+    <div class="page" id="page-2">
+        <div class="header-top">
+            <div class="header-left">
+                <p>Bệnh viện Nhi Đồng 1</p>
+                <p>Ban QLCLXN</p>
+                <p>Khoa Xét nghiệm Huyết Học</p>
+            </div>
+            <div class="header-right-small">
+                PHIẾU THEO DÕI NHIỆT ĐỘ TỦ Ủ MẪU (MEMMERT) ( 37-56°C)
+            </div>
+        </div>
+        <div class="header-center">
+            <h1>PHIẾU THEO DÕI NHIỆT ĐỘ TỦ Ủ MẪU (MEMMERT) ( 37-56°C)</h1>
+            <p>(TRANG 2)</p>
+        </div>
+
+        <div class="meta">
+            <div class="meta-left">
+                <p>Tháng: <span class="dots" id="meta-m-2"></span></p>
+                <p>Người quản lý: <span id="meta-nql-2">NHN028</span></p>
+            </div>
+            <div class="meta-right">
+                <p>Mã nhiệt kế: <span class="dots" id="meta-mnk-2"></span></p>
+                <p>Hệ số hiệu chỉnh: <span class="dots" id="meta-hshc-2"></span></p>
+                <p>Mã thiết bị: <span id="meta-mtb-2">HE-cm-064</span></p>
+            </div>
+        </div>
+
+        <div class="chart-wrap" id="chart-wrap-2">
+            <svg class="chart-svg" id="chart-svg-2"></svg>
+            <table id="table-2">
+                <thead>
+                    <tr>
+                        <th class="col-label">Ngày</th>
+                        <th colspan="2">16</th>
+                        <th colspan="2">17</th>
+                        <th colspan="2">18</th>
+                        <th colspan="2">19</th>
+                        <th colspan="2">20</th>
+                        <th colspan="2">21</th>
+                        <th colspan="2">22</th>
+                        <th colspan="2">23</th>
+                        <th colspan="2">24</th>
+                        <th colspan="2">25</th>
+                        <th colspan="2">26</th>
+                        <th colspan="2">27</th>
+                        <th colspan="2">28</th>
+                        <th colspan="2">29</th>
+                        <th colspan="2">30</th>
+                        <th colspan="2">31</th>
+                    </tr>
+                    <tr>
+                        <th class="col-session">To</th>
+                        <th>S</th>
+                        <th>C</th>
+                        <th>S</th>
+                        <th>C</th>
+                        <th>S</th>
+                        <th>C</th>
+                        <th>S</th>
+                        <th>C</th>
+                        <th>S</th>
+                        <th>C</th>
+                        <th>S</th>
+                        <th>C</th>
+                        <th>S</th>
+                        <th>C</th>
+                        <th>S</th>
+                        <th>C</th>
+                        <th>S</th>
+                        <th>C</th>
+                        <th>S</th>
+                        <th>C</th>
+                        <th>S</th>
+                        <th>C</th>
+                        <th>S</th>
+                        <th>C</th>
+                        <th>S</th>
+                        <th>C</th>
+                        <th>S</th>
+                        <th>C</th>
+                        <th>S</th>
+                        <th>C</th>
+                        <th>S</th>
+                        <th>C</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-2"></tbody>
+                <tbody id="signature-tbody-2"></tbody>
+                <tfoot>
+                    <tr class="manager-row-height">
+                        <td class="footer-label">Trưởng bộ phận</td>
+                        <td colspan="32" class="manager-name" id="manager-row-2">NHN028</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        <div class="note-footer" id="note-2">S (Sáng) 8:00, C (Chiều) 16:00</div>
+    </div>
+
+    <script>
+        const temps = ['', 57, 56, 55, '', 'sep', '', 38, 37, 36, ''];
+
+        function parseDataParam() {
+            const search = window.location.search || '';
+            const normalizedSearch = search.replace(/\?/g, '&').replace(/^&+/, '');
+            const params = new URLSearchParams(normalizedSearch);
+
+            let dataEntries = [];
+            for (const [key, value] of params.entries()) {
+                if (key === 'data') dataEntries.push(value);
+                else if (/^\d{1,2}[SC]_t/i.test(key)) dataEntries.push(key + (value ? '=' + value : ''));
+            }
+
+            const map = {};
+            dataEntries.join('|').split(/[|&]/).forEach(item => {
+                const m = item.trim().match(/^(\d{1,2})([SC])_t(-?\d+)_a(\d+)?_?(.+)?$/i);
+                if (m) {
+                    const day = Number(m[1]);
+                    const session = m[2].toUpperCase();
+                    const temp = Number(m[3]);
+                    const sign = m[5] || '';
+                    if (!map[day]) map[day] = {};
+                    map[day][session] = { temp, sign };
+                }
+            });
+
+            return {
+                map,
+                month: params.get('thang') || '',
+                mnk: params.get('mnk') || '',
+                mtb: params.get('mtb') || 'HE-cm-064',
+                nql: params.get('nql') || 'NHN028',
+                hshc: params.get('hshc') || ''
+            };
+        }
+
+        const data = parseDataParam();
+
+        function renderRows(tbodyId, tableId, startDay, endDay) {
+            const tbody = document.getElementById(tbodyId);
+            const signatureTbody = document.getElementById(`signature-tbody-${tableId}`);
+            let html = '';
+
+            temps.forEach(t => {
+                if (t === 'sep') {
+                    html += `<tr class="separator-row"><td colspan="${(endDay - startDay + 1) * 2 + 1}"></td></tr>`;
+                } else {
+                    html += `<tr><td class="col-label">${t}</td>`;
+                    for (let d = startDay; d <= endDay; d++) {
+                        const sTemp = data.map[d]?.S?.temp;
+                        const cTemp = data.map[d]?.C?.temp;
+                        html += `<td data-table="${tableId}" data-key="d${d}-S" data-val="${sTemp === t ? 'dot' : ''}">${sTemp === t ? '●' : ''}</td>`;
+                        html += `<td data-table="${tableId}" data-key="d${d}-C" data-val="${cTemp === t ? 'dot' : ''}">${cTemp === t ? '●' : ''}</td>`;
+                    }
+                    html += `</tr>`;
+                }
+            });
+            tbody.innerHTML = html;
+
+            // Generate individual signature cells
+            let sigHtml = `<tr class="signature-row"><td class="footer-label">Người thực hiện</td>`;
+            for (let d = startDay; d <= endDay; d++) {
+                const sSign = data.map[d]?.S?.sign || '';
+                const cSign = data.map[d]?.C?.sign || '';
+                sigHtml += `<td style="font-size: 10px;">${sSign}</td><td style="font-size: 10px;">${cSign}</td>`;
+            }
+            sigHtml += `</tr>`;
+            signatureTbody.innerHTML = sigHtml;
+        }
+
+        function init() {
+            renderRows('tbody-1', '1', 1, 15);
+            renderRows('tbody-2', '2', 16, 31);
+
+            // Update Meta
+            ['1', '2'].forEach(p => {
+                if (data.month) {
+                    const parts = data.month.split(/[-./]/);
+                    const formatted = parts.length >= 2 ? `${parts[1]}/${parts[0]}` : data.month;
+                    document.getElementById(`meta-m-${p}`).textContent = formatted;
+                }
+                if (data.mnk) document.getElementById(`meta-mnk-${p}`).textContent = data.mnk;
+                if (data.hshc) document.getElementById(`meta-hshc-${p}`).textContent = data.hshc;
+                if (data.mtb) document.getElementById(`meta-mtb-${p}`).textContent = data.mtb;
+                if (data.nql) document.getElementById(`meta-nql-${p}`).textContent = data.nql;
+
+                const mRow = document.getElementById(`manager-row-${p}`);
+                if (mRow && data.nql) mRow.textContent = data.nql;
+            });
+        }
+
+        function getCellPos(cell, container) {
+            const r = cell.getBoundingClientRect();
+            const cr = container.getBoundingClientRect();
+            return { x: r.left - cr.left + r.width / 2, y: r.top - cr.top + r.height / 2 };
+        }
+
+        function drawLines() {
+            [{ id: '1', start: 1, end: 15 }, { id: '2', start: 16, end: 31 }].forEach(cfg => {
+                const svg = document.getElementById(`chart-svg-${cfg.id}`);
+                const wrap = document.getElementById(`chart-wrap-${cfg.id}`);
+                if (!svg || !wrap) return;
+                svg.setAttribute('viewBox', `0 0 ${wrap.clientWidth} ${wrap.clientHeight}`);
+                svg.innerHTML = '';
+
+                let points = [];
+                for (let d = cfg.start; d <= cfg.end; d++) {
+                    const s = document.querySelector(`[data-table="${cfg.id}"][data-key="d${d}-S"][data-val="dot"]`);
+                    const c = document.querySelector(`[data-table="${cfg.id}"][data-key="d${d}-C"][data-val="dot"]`);
+                    if (s) points.push(getCellPos(s, wrap));
+                    if (c) points.push(getCellPos(c, wrap));
+                }
+
+                if (points.length < 2) return;
+                const path = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+                path.setAttribute("points", points.map(p => `${p.x},${p.y}`).join(' '));
+                path.setAttribute("fill", "none");
+                path.setAttribute("stroke", "var(--line)");
+                path.setAttribute("stroke-width", "1.5");
+                svg.appendChild(path);
+            });
+        }
+
+        function printPage() {
+            window.print();
+        }
+
+        init();
+        window.onload = () => {
+            setTimeout(drawLines, 500);
+        };
+        window.onresize = drawLines;
+    </script>
+</body>
+
+</html>
