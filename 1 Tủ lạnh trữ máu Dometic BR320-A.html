@@ -469,17 +469,16 @@
             });
 
             // Các giá trị metadata khác
-            const tu = params.get('tu') || 'Dometic BR320-A';
             const mnk = params.get('mnk') || '';
             const mtb = params.get('mtb') || 'HE-bb-002';
             const nql = params.get('nql') || 'LIB001';
             const hshc = params.get('hshc') || '………..';
             const luu = params.get('luu') || '3';
 
-            return { map, month, tu, mnk, mtb, nql, hshc, luu };
+            return { map, month, mnk, mtb, nql, hshc, luu };
         }
 
-        const { map: dataMap, month: dataMonth, tu: dataTu, mnk: dataMnk, mtb: dataMtb, nql: dataNql, hshc: dataHshc, luu: dataLuu } = parseDataParam();
+        const { map: dataMap, month: dataMonth, mnk: dataMnk, mtb: dataMtb, nql: dataNql, hshc: dataHshc, luu: dataLuu } = parseDataParam();
 
         function renderHalfTable({ headId, row1Id, row2Id, bodyId, signatureId, managerId, tableId, startDay, endDay }) {
             const head = document.getElementById(headId);
@@ -543,7 +542,6 @@
             const yVal = parts.length >= 2 ? parts[0].padStart(4, '0') : '';
 
             [1, 2].forEach(p => {
-                if (dataTu) document.getElementById(`meta-tu-${p}`).textContent = dataTu;
                 if (dataNql) document.getElementById(`meta-nql-${p}`).textContent = dataNql;
                 if (dataMnk) document.getElementById(`meta-mnk-${p}`).textContent = dataMnk;
                 if (dataMtb) document.getElementById(`meta-mtb-${p}`).textContent = dataMtb;
