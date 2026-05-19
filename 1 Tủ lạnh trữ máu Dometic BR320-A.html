@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phiếu theo dõi nhiệt độ tủ lạnh</title>
+    <style>
+        :root {
+            --border: #707070;
+            --grid: #666;
+            --text: #222;
+            --paper: #fff;
+            --line: #d64d4d;
+            --dot: #9aa0a6;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: #f2f2f2;
+            font-family: Arial, Helvetica, sans-serif;
+            color: var(--text);
+        }
+
+        .page {
+            width: 100%;
+            max-width: 1120px;
+            margin: 10px auto;
+            background: var(--paper);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, .12);
+            padding: 10px 12px 12px;
+            position: relative;
+        }
+
+        .top-info {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            font-size: 14px;
+            line-height: 1.3;
+            margin-bottom: 8px;
+        }
+
+        .top-left p,
+        .top-right p {
+            margin: 0 0 2px 0;
+        }
+
+        .title {
+            text-align: center;
+            margin: 8px 0;
+            line-height: 1.2;
+        }
+
+        .title h1 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .title .sub {
+            font-size: 12px;
+        }
+
+        .meta {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            font-size: 13px;
+            margin-bottom: 8px;
+            align-items: flex-start;
+        }
+
+        .meta .col {
+            flex: 1;
+        }
+
+        .meta p {
+            margin: 0 0 6px 0;
+            white-space: nowrap;
+        }
+
+        .meta b {
+            font-weight: 700;
+        }
+
+        .meta span.dots {
+            border-bottom: 1px dotted #888;
+            min-width: 120px;
+            display: inline-block;
+            padding: 0 4px;
+            vertical-align: bottom;
+            line-height: 1.2;
+            height: 18px;
+        }
+
+        .meta .checkbox {
+            display: inline-block;
+            margin-right: 2px;
+            vertical-align: middle;
+            text-align: center;
+            font-size: 14px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .meta .checkbox:hover {
+            color: #1d4ed8;
+        }
+
+        .chart-wrap {
+            position: relative;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .chart-svg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            position: relative;
+            z-index: 1;
+        }
+
+        th,
+        td {
+            border: 1px solid var(--grid);
+            text-align: center;
+            padding: 0;
+            height: 24px;
+            font-size: 11px;
+        }
+
+        thead th {
+            font-weight: 700;
+            background: #f4f4f4;
+        }
+
+        .corner {
+            width: 60px;
+        }
+
+        .day-head {
+            font-size: 12px;
+        }
+
+        .buoi {
+            width: 46px;
+        }
+
+        .temp-cell {
+            width: 60px;
+            font-weight: 700;
+        }
+
+        .temp-8,
+        .temp-2 {
+            color: #c0392b;
+        }
+
+        .dot-cell {
+            position: relative;
+        }
+
+        .dot-cell.has-point::before {
+            content: '.';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -54%);
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--dot);
+        }
+
+        .signature-row td,
+        .manager-row td {
+            height: 80px;
+            font-size: 11px;
+            color: #4f6aa3;
+            font-weight: 700;
+            vertical-align: middle;
+            text-align: center;
+        }
+
+        .manager-row td {
+            height: 40px;
+            color: var(--text);
+        }
+
+        .signature-row td:not(:first-child) {
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+            white-space: nowrap;
+            padding: 5px 0;
+        }
+
+        .note {
+            font-size: 12px;
+            font-style: italic;
+            color: #444;
+            margin-top: 6px;
+            margin-bottom: 18px;
+        }
+
+        .bottom-left-text {
+            position: absolute;
+            left: 18px;
+            bottom: 6px;
+            font-family: "Times New Roman", serif;
+            font-size: 18px;
+            font-weight: 700;
+            color: #111;
+        }
+
+        .bottom-right-text {
+            position: absolute;
+            right: 18px;
+            bottom: 8px;
+            font-family: "Times New Roman", serif;
+            font-size: 16px;
+            font-weight: 700;
+            color: #111;
+        }
+
+        .print-btn {
+            position: fixed;
+            right: 16px;
+            bottom: 16px;
+            border: 0;
+            background: #1d4ed8;
+            color: #fff;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            box-shadow: 0 6px 18px rgba(29, 78, 216, .25);
+        }
+
+        @media print {
+            @page {
+                size: A4 landscape;
+                margin: 5mm;
+            }
+
+            html,
+            body {
+                width: 297mm;
+                margin: 0;
+                padding: 0;
+                background: #fff;
+            }
+
+            .page {
+                width: 287mm;
+                min-height: 200mm;
+                box-shadow: none;
+                border-radius: 0;
+                margin: 0 auto;
+                max-width: 287mm;
+                padding: 0;
+                page-break-after: always;
+                overflow: visible;
+            }
+
+            .page:last-child {
+                page-break-after: auto;
+            }
+
+            .print-btn {
+                display: none;
+            }
+
+            th,
+            td {
+                height: 24px;
+                font-size: 11px;
+            }
+
+            .chart-wrap {
+                width: 100%;
+            }
+
+            .top-info,
+            .meta,
+            .title {
+                margin-bottom: 6px;
+            }
+
+            .note {
+                margin-bottom: 24px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="page" id="page-1">
+        <div class="top-info">
+            <div class="top-left">
+                <p><b>Bệnh viện Nhi Đồng 1</b></p>
+                <p>Ban QLCLXN</p>
+                <p>Khoa Xét nghiệm Huyết Học</p>
+            </div>
+            <div class="top-right" style="text-align:right;">
+                <p>Phiếu theo dõi nhiệt độ tủ lạnh trữ hóa chất 2-8 C</p>
+            </div>
+        </div>
+
+        <div class="title">
+            <h1>PHIẾU THEO DÕI NHIỆT ĐỘ TỦ LẠNH TRỮ HÓA CHẤT 2-8°C</h1>
+            <div class="sub">(TRANG 1)</div>
+        </div>
+
+        <div class="meta">
+            <div class="col" style="width: 35%;">
+                <p><b>Loại tủ (2-8°C):</b> <span class="dots" id="meta-tu-1">Dometic BR320-A</span></p>
+                <p><b>Người quản lý:</b> <span class="dots" id="meta-nql-1">LIB001</span></p>
+            </div>
+            <div class="col" style="width: 35%; text-align:left; padding-left: 20px;">
+                <p><b>Mã nhiệt kế:</b> <span class="dots" id="meta-mnk-1"></span></p>
+                <p><b>Mã thiết bị:</b> <span class="dots" id="meta-mtb-1">HE-bb-002</span></p>
+                <p><b>Hệ số hiệu chỉnh:</b> <span class="dots" id="meta-hshc-1">………..</span></p>
+            </div>
+            <div class="col" style="width: 30%; text-align:right;">
+                <p>Lưu: <span class="checkbox" id="cb-bp-1" onclick="updateLuu('1')">q</span> Mẫu BP &nbsp; <span
+                        class="checkbox" id="cb-hc-1" onclick="updateLuu('2')">q</span> Hóa chất &nbsp; <span
+                        class="checkbox" id="cb-k-1" onclick="updateLuu('3')">X</span> Khác:</p>
+                <p><b>Tháng:</b> <span class="dots" id="meta-m-1">……..</span> <b>Năm:</b> <span class="dots"
+                        id="meta-y-1">…………..</span></p>
+            </div>
+        </div>
+
+        <div class="chart-wrap" id="chart-wrap-1">
+            <svg class="chart-svg" id="chart-svg-1"></svg>
+            <table>
+                <thead>
+                    <tr>
+                        <th class="corner">Nhiệt độ</th>
+                        <th class="day-head" id="day-head-1" colspan="30">Ngày trong tháng (1 - 15)</th>
+                    </tr>
+                    <tr id="day-row-1-1"></tr>
+                    <tr id="day-row-1-2"></tr>
+                </thead>
+                <tbody id="tbody-1"></tbody>
+                <tbody>
+                    <tr class="signature-row" id="signature-row-1"></tr>
+                    <tr class="manager-row" id="manager-row-1"></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="note">* Ghi chú: S = Sáng (8:00), C = Chiều (16:00). Đánh dấu √ vào ô nhiệt độ đo được.</div>
+        <div class="bottom-left-text">FM-EQ-HE-003 V4.0</div>
+        <div class="bottom-right-text" id="eff-date-1"></div>
+    </div>
+
+    <div class="page" id="page-2">
+        <div class="top-info">
+            <div class="top-left">
+                <p><b>Bệnh viện Nhi Đồng 1</b></p>
+                <p>Ban QLCLXN</p>
+                <p>Khoa Xét nghiệm Huyết Học</p>
+            </div>
+            <div class="top-right" style="text-align:right;">
+                <p>Phiếu theo dõi nhiệt độ tủ lạnh trữ hóa chất 2-8 C</p>
+            </div>
+        </div>
+
+        <div class="title">
+            <h1>PHIẾU THEO DÕI NHIỆT ĐỘ TỦ LẠNH TRỮ HÓA CHẤT 2-8°C</h1>
+            <div class="sub">(TRANG 2)</div>
+        </div>
+
+        <div class="meta">
+            <div class="col" style="width: 35%;">
+                <p><b>Loại tủ (2-8°C):</b> <span class="dots" id="meta-tu-2">Dometic BR320-A</span></p>
+                <p><b>Người quản lý:</b> <span class="dots" id="meta-nql-2">LIB001</span></p>
+            </div>
+            <div class="col" style="width: 35%; text-align:left; padding-left: 20px;">
+                <p><b>Mã nhiệt kế:</b> <span class="dots" id="meta-mnk-2"></span></p>
+                <p><b>Mã thiết bị:</b> <span class="dots" id="meta-mtb-2">HE-bb-002</span></p>
+                <p><b>Hệ số hiệu chỉnh:</b> <span class="dots" id="meta-hshc-2">………..</span></p>
+            </div>
+            <div class="col" style="width: 30%; text-align:right;">
+                <p>Lưu: <span class="checkbox" id="cb-bp-2" onclick="updateLuu('1')">q</span> Mẫu BP &nbsp; <span
+                        class="checkbox" id="cb-hc-2" onclick="updateLuu('2')">q</span> Hóa chất &nbsp; <span
+                        class="checkbox" id="cb-k-2" onclick="updateLuu('3')">X</span> Khác:</p>
+                <p><b>Tháng:</b> <span class="dots" id="meta-m-2">……..</span> <b>Năm:</b> <span class="dots"
+                        id="meta-y-2">…………..</span></p>
+            </div>
+        </div>
+
+        <div class="chart-wrap" id="chart-wrap-2">
+            <svg class="chart-svg" id="chart-svg-2"></svg>
+            <table>
+                <thead>
+                    <tr>
+                        <th class="corner">Nhiệt độ</th>
+                        <th class="day-head" id="day-head-2" colspan="32">Ngày trong tháng (16 - 31)</th>
+                    </tr>
+                    <tr id="day-row-2-1"></tr>
+                    <tr id="day-row-2-2"></tr>
+                </thead>
+                <tbody id="tbody-2"></tbody>
+                <tbody>
+                    <tr class="signature-row" id="signature-row-2"></tr>
+                    <tr class="manager-row" id="manager-row-2"></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="note">* Ghi chú: S = Sáng (8:00), C = Chiều (16:00). Đánh dấu √ vào ô nhiệt độ đo được.</div>
+        <div class="bottom-left-text">FM-EQ-HE-003 V4.0</div>
+        <div class="bottom-right-text" id="eff-date-2"></div>
+    </div>
+
+    <button class="print-btn" onclick="printPage()">IN</button>
+
+    <script>
+        const temps = [8, 7, 6, 5, 4, 3, 2];
+
+        function parseDataParam() {
+            const search = window.location.search || '';
+            // Chuẩn hóa link: đổi các dấu ? thừa thành &
+            const normalizedSearch = search.replace(/\?/g, '&').replace(/^&+/, '');
+            const params = new URLSearchParams(normalizedSearch);
+
+            let month = params.get('thang') || '';
+
+            // Thu thập tất cả các entry dữ liệu (key=data hoặc key dạng (\d)S_t...)
+            let dataEntries = [];
+            for (const [key, value] of params.entries()) {
+                if (key === 'data') {
+                    dataEntries.push(value);
+                } else if (/^\d{1,2}[SC]_t/i.test(key)) {
+                    dataEntries.push(key + (value ? '=' + value : ''));
+                }
+            }
+
+            const map = {};
+            // Ghép lại và tách theo | hoặc &
+            dataEntries.join('|').split(/[|&]/).forEach(item => {
+                // Regex cho định dạng: 7S_t5_a_Sign
+                const m = item.trim().match(/^(\d{1,2})([SC])_t(-?\d+)_a(\d+)?_?(.+)?$/i);
+                if (m) {
+                    const day = Number(m[1]);
+                    const session = m[2].toUpperCase();
+                    const temp = Number(m[3]);
+                    const sign = m[5] || ''; // m[4] là độ ẩm, tủ lạnh bỏ qua
+                    if (!map[day]) map[day] = {};
+                    map[day][session] = { temp, sign };
+                }
+            });
+
+            // Các giá trị metadata khác
+            const tu = params.get('tu') || 'Dometic BR320-A';
+            const mnk = params.get('mnk') || '';
+            const mtb = params.get('mtb') || 'HE-bb-002';
+            const nql = params.get('nql') || 'LIB001';
+            const hshc = params.get('hshc') || '………..';
+            const luu = params.get('luu') || '3';
+
+            return { map, month, tu, mnk, mtb, nql, hshc, luu };
+        }
+
+        const { map: dataMap, month: dataMonth, tu: dataTu, mnk: dataMnk, mtb: dataMtb, nql: dataNql, hshc: dataHshc, luu: dataLuu } = parseDataParam();
+
+        function renderHalfTable({ headId, row1Id, row2Id, bodyId, signatureId, managerId, tableId, startDay, endDay }) {
+            const head = document.getElementById(headId);
+            const row1 = document.getElementById(row1Id);
+            const row2 = document.getElementById(row2Id);
+            const body = document.getElementById(bodyId);
+            const signatureRow = document.getElementById(signatureId);
+            const managerRow = document.getElementById(managerId);
+            const days = endDay - startDay + 1;
+
+            head.textContent = `Ngày trong tháng (${startDay} - ${endDay})`;
+            row1.innerHTML = `<th class="buoi"></th>${Array.from({ length: days }, (_, i) => `<th colspan="2">${startDay + i}</th>`).join('')}`;
+            row2.innerHTML = `<th class="buoi">Buổi</th>${Array.from({ length: days }, () => `<th>S</th><th>C</th>`).join('')}`;
+
+            signatureRow.innerHTML = `<td class="temp-cell">Tên</td>${Array.from({ length: days }, (_, i) => {
+                const d = startDay + i;
+                const signS = dataMap[d]?.S?.sign || '';
+                const signC = dataMap[d]?.C?.sign || '';
+                return `<td>${signS}</td><td>${signC}</td>`;
+            }).join('')}`;
+
+            managerRow.innerHTML = `<td class="temp-cell">Trưởng bộ phận</td><td colspan="${days * 2}" style="font-weight:700; font-size:14px; vertical-align:middle; text-align:center;">LIB001</td>`;
+
+            let html = '';
+            temps.forEach(t => {
+                html += `<tr><td class="temp-cell temp-${t}">${t}°C</td>`;
+                for (let d = startDay; d <= endDay; d++) {
+                    const m = dataMap[d]?.S?.temp;
+                    const c = dataMap[d]?.C?.temp;
+                    html += `<td class="dot-cell ${m === t ? 'has-point' : ''}" data-table="${tableId}" data-key="${m === t ? `d${d}-S` : ''}"></td>`;
+                    html += `<td class="dot-cell ${c === t ? 'has-point' : ''}" data-table="${tableId}" data-key="${c === t ? `d${d}-C` : ''}"></td>`;
+                }
+                html += `</tr>`;
+            });
+            body.innerHTML = html;
+        }
+
+        function formatDateString(input) {
+            const normalized = String(input || '').trim().replace(/[-.]/g, '/');
+            const parts = normalized.split('/').filter(Boolean);
+            if (parts.length < 2) return '';
+            const year = parts[0].padStart(4, '0');
+            const month = parts[1].padStart(2, '0');
+            return `01/${month}/${year}`;
+        }
+
+        function buildTables() {
+            renderHalfTable({ headId: 'day-head-1', row1Id: 'day-row-1-1', row2Id: 'day-row-1-2', bodyId: 'tbody-1', signatureId: 'signature-row-1', managerId: 'manager-row-1', tableId: '1', startDay: 1, endDay: 15 });
+            renderHalfTable({ headId: 'day-head-2', row1Id: 'day-row-2-1', row2Id: 'day-row-2-2', bodyId: 'tbody-2', signatureId: 'signature-row-2', managerId: 'manager-row-2', tableId: '2', startDay: 16, endDay: 31 });
+
+            const eff1 = document.getElementById('eff-date-1');
+            const eff2 = document.getElementById('eff-date-2');
+            const effText = formatDateString(dataMonth);
+            const formatted = effText ? `Ngày hiệu lực :${effText}` : 'Ngày hiệu lực :';
+            if (eff1) eff1.textContent = formatted;
+            if (eff2) eff2.textContent = formatted;
+
+            const normalizedMonth = String(dataMonth).trim().replace(/[-.]/g, '/');
+            const parts = normalizedMonth.split('/').filter(Boolean);
+            const mVal = parts.length >= 2 ? parts[1].padStart(2, '0') : '';
+            const yVal = parts.length >= 2 ? parts[0].padStart(4, '0') : '';
+
+            [1, 2].forEach(p => {
+                if (dataTu) document.getElementById(`meta-tu-${p}`).textContent = dataTu;
+                if (dataNql) document.getElementById(`meta-nql-${p}`).textContent = dataNql;
+                if (dataMnk) document.getElementById(`meta-mnk-${p}`).textContent = dataMnk;
+                if (dataMtb) document.getElementById(`meta-mtb-${p}`).textContent = dataMtb;
+                if (dataHshc) document.getElementById(`meta-hshc-${p}`).textContent = dataHshc;
+                if (mVal) document.getElementById(`meta-m-${p}`).textContent = mVal;
+                if (yVal) document.getElementById(`meta-y-${p}`).textContent = yVal;
+
+                // Xử lý Checkbox Lưu
+                updateLuu(dataLuu);
+            });
+        }
+
+        function updateLuu(val) {
+            [1, 2].forEach(p => {
+                const boxes = { '1': `cb-bp-${p}`, '2': `cb-hc-${p}`, '3': `cb-k-${p}` };
+                Object.values(boxes).forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.textContent = 'q';
+                });
+                const target = document.getElementById(boxes[val]);
+                if (target) target.textContent = 'X';
+            });
+        }
+
+        function getCellCenter(cell, container) {
+            const cellRect = cell.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+            const x = (cellRect.left - containerRect.left) + cellRect.width / 2;
+            const y = (cellRect.top - containerRect.top) + cellRect.height / 2;
+            return { x, y };
+        }
+
+        function drawLine(svgId, tableId, startDay, endDay) {
+            const wrap = document.getElementById(`chart-wrap-${tableId}`);
+            const svg = document.getElementById(svgId);
+            const width = wrap.clientWidth || 0;
+            const height = wrap.clientHeight || 0;
+            svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+            const points = [];
+
+            for (let d = startDay; d <= endDay; d++) {
+                const m = document.querySelector(`[data-table="${tableId}"][data-key="d${d}-S"]`);
+                const c = document.querySelector(`[data-table="${tableId}"][data-key="d${d}-C"]`);
+                if (m) points.push(getCellCenter(m, wrap));
+                if (c) points.push(getCellCenter(c, wrap));
+            }
+
+            svg.innerHTML = '';
+            if (points.length < 2) return;
+
+            const ns = 'http://www.w3.org/2000/svg';
+            const poly = document.createElementNS(ns, 'polyline');
+            poly.setAttribute('fill', 'none');
+            poly.setAttribute('stroke', 'var(--line)');
+            poly.setAttribute('stroke-width', '2');
+            poly.setAttribute('stroke-linecap', 'round');
+            poly.setAttribute('stroke-linejoin', 'round');
+            poly.setAttribute('points', points.map(p => `${p.x},${p.y}`).join(' '));
+            svg.appendChild(poly);
+
+            points.forEach(p => {
+                const c = document.createElementNS(ns, 'circle');
+                c.setAttribute('cx', p.x);
+                c.setAttribute('cy', p.y);
+                c.setAttribute('r', 1.8);
+                c.setAttribute('fill', 'var(--line)');
+                svg.appendChild(c);
+            });
+        }
+
+        function redrawAll() {
+            drawLine('chart-svg-1', '1', 1, 15);
+            drawLine('chart-svg-2', '2', 16, 31);
+        }
+
+        function redrawAfterLayout(callback) {
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    redrawAll();
+                    if (typeof callback === 'function') callback();
+                });
+            });
+        }
+
+        function printPage() {
+            redrawAfterLayout(() => window.print());
+        }
+
+        buildTables();
+        window.addEventListener('load', () => redrawAfterLayout());
+        window.addEventListener('resize', () => redrawAfterLayout());
+        window.addEventListener('beforeprint', () => redrawAfterLayout());
+
+        if (window.matchMedia) {
+            const mediaQueryList = window.matchMedia('print');
+            const onPrintMediaChange = () => redrawAfterLayout();
+            if (mediaQueryList.addEventListener) {
+                mediaQueryList.addEventListener('change', onPrintMediaChange);
+            } else if (mediaQueryList.addListener) {
+                mediaQueryList.addListener(onPrintMediaChange);
+            }
+        }
+    </script>
+</body>
+
+</html>
