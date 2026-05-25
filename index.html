@@ -603,6 +603,9 @@
                 "panasonic mdf-137",
                 "thermo scientific",
                 "helmer pc100i"
+            ],
+            normalScheduleCabinets: [
+                "tu lanh tru hoa chat thermo scientific"
             ]
         };
 
@@ -897,14 +900,33 @@
             renderKhungGioButtons(val);
         }
 
+        function normalizeScheduleName(value) {
+            return String(value || '')
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/đ/g, 'd');
+        }
+
+        function isNormalScheduleCabinet(tenTu) {
+            const normalizedName = normalizeScheduleName(tenTu);
+            return CONFIG.normalScheduleCabinets.some(s => normalizedName.includes(normalizeScheduleName(s)));
+        }
+
+        function isSpecialScheduleCabinet(tenTu) {
+            const normalizedName = normalizeScheduleName(tenTu);
+            const matchesSpecial = CONFIG.specialCabinets.some(s => normalizedName.includes(normalizeScheduleName(s)));
+            return matchesSpecial && !isNormalScheduleCabinet(tenTu);
+        }
+
         function renderKhungGioButtons(selectedVal) {
             const container = document.getElementById('khung-gio-buttons');
             if (!container) return;
             container.innerHTML = '';
 
             // Check if cabinet name is in special list or in plasma range
-            const tenTu = String(document.getElementById('input_ten').value).toLowerCase();
-            const isSpecialName = CONFIG.specialCabinets.some(s => tenTu.includes(s));
+            const tenTu = document.getElementById('input_ten').value;
+            const isSpecialName = isSpecialScheduleCabinet(tenTu);
 
             const minVal = parseFloat(String(document.getElementById('input_nhiet_do_min').value).replace(',', '.'));
             const maxVal = parseFloat(String(document.getElementById('input_nhiet_do_max').value).replace(',', '.'));
@@ -949,8 +971,8 @@
             let defaultVal = 'Sáng';
 
             // Check if cabinet name is in special list or in plasma range
-            const tenTu = String(document.getElementById('input_ten').value).toLowerCase();
-            const isSpecialName = CONFIG.specialCabinets.some(s => tenTu.includes(s));
+            const tenTu = document.getElementById('input_ten').value;
+            const isSpecialName = isSpecialScheduleCabinet(tenTu);
 
             const minVal = parseFloat(String(document.getElementById('input_nhiet_do_min').value).replace(',', '.'));
             const maxVal = parseFloat(String(document.getElementById('input_nhiet_do_max').value).replace(',', '.'));
