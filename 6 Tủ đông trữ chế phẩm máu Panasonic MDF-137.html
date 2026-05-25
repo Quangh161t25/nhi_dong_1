@@ -11,7 +11,7 @@
             --grid: #444;
             --text: #000;
             --paper: #fff;
-            --line: #0000ff;
+            --line: red;
             --dot: #555;
         }
 
@@ -218,10 +218,19 @@
             const normalizedSearch = search.replace(/\?/g, '&').replace(/^&+/, '');
             const params = new URLSearchParams(normalizedSearch);
 
+            let dataEntries = [];
+            for (const [key, value] of params.entries()) {
+                if (key === 'data') {
+                    dataEntries.push(value);
+                } else if (/^\d{1,2}L\d/i.test(key)) {
+                    dataEntries.push(key + (value ? '=' + value : ''));
+                }
+            }
+
             return {
                 thang: params.get('thang') || '',
                 tu: params.get('tu') || '',
-                data: params.get('data') || '',
+                data: dataEntries.join('|'),
                 mnk: params.get('mnk') || '',
                 mtb: params.get('mtb') || '',
                 nql: params.get('nql') || '',
@@ -233,9 +242,10 @@
             const map = {};
             if (!dataStr) return map;
 
-            const items = dataStr.split('|');
+            const items = dataStr.split(/[|&]/);
             items.forEach(item => {
-                const match = item.match(/^(\d+)L(\d+)(-?\d+)(?:_(.*))?$/);
+                item = item.replace(/\.$/, '');
+                const match = item.trim().match(/^(\d+)L(\d+)(?:_t)?(-?\d+)(?:(?:_a_?|_)(.*))?$/i);
                 if (match) {
                     const day = parseInt(match[1]);
                     const slot = parseInt(match[2]);
@@ -401,7 +411,7 @@
 
             const path = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
             path.setAttribute("points", points.map(p => `${p.x},${p.y}`).join(' '));
-            path.setAttribute("stroke", "blue");
+            path.setAttribute("stroke", "red");
             path.setAttribute("stroke-width", "1");
             path.setAttribute("fill", "none");
             svg.appendChild(path);

@@ -11,7 +11,7 @@
             --grid: #444;
             --text: #000;
             --paper: #fff;
-            --line: #0000ff;
+            --line: red;
             --dot: #555;
         }
 
@@ -411,7 +411,7 @@
 
             const path = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
             path.setAttribute("points", points.map(p => `${p.x},${p.y}`).join(' '));
-            path.setAttribute("stroke", "blue");
+            path.setAttribute("stroke", "red");
             path.setAttribute("stroke-width", "1");
             path.setAttribute("fill", "none");
             svg.appendChild(path);
