@@ -200,19 +200,20 @@
             }
         }
     </style>
-
     <style id="maintenance-form-style">
         .maintenance-sheet {
             width: 297mm;
             min-height: 210mm;
             margin: 10px auto;
-            padding: 8mm 10mm;
+            padding: 6mm 6mm;
             background: #fff;
             color: #111;
             font-family: "Times New Roman", Times, serif;
             page-break-before: always;
             page-break-after: auto;
             box-shadow: 0 0 10px rgba(0, 0, 0, .1);
+            overflow: hidden;
+            box-sizing: border-box;
         }
 
         .maintenance-sheet * {
@@ -223,59 +224,68 @@
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            gap: 12px;
+            gap: 10px;
         }
 
         .maintenance-unit {
-            line-height: 1.2;
-            font-size: 24px;
+            width: 220px;
+            line-height: 1.15;
+            font-size: 20px;
             font-weight: normal;
             text-align: left;
+            flex: 0 0 auto;
         }
 
         .maintenance-title-wrap {
             text-align: center;
             flex: 1;
+            min-width: 0;
         }
 
         .maintenance-title {
             margin: 0;
-            font-size: 36px;
+            font-size: 30px;
             font-weight: 700;
-            letter-spacing: .5px;
+            letter-spacing: 0;
+            white-space: nowrap;
         }
 
         .maintenance-month-line {
-            margin-top: 6px;
-            font-size: 22px;
+            margin-top: 3px;
+            font-size: 18px;
         }
 
         .maintenance-section-title {
-            margin: 12px 0 6px;
-            font-size: 26px;
+            margin: 8px 0 4px;
+            font-size: 21px;
             font-weight: 700;
             text-transform: uppercase;
+            white-space: nowrap;
         }
 
         .maintenance-table {
             width: 100%;
+            max-width: 100%;
             border-collapse: collapse;
             table-layout: fixed;
             position: static;
             z-index: auto;
+            border: 1px solid #000;
         }
 
         .maintenance-table th,
         .maintenance-table td {
-            border: 1px solid #222;
-            padding: 3px 5px;
-            font-size: 16px;
+            border: 1px solid #000;
+            padding: 1px 2px;
+            font-size: 13px;
             height: auto;
             vertical-align: middle;
             text-align: center;
             font-weight: normal;
             color: #111;
             background: #fff;
+            overflow: visible;
+            box-shadow: inset 0 0 0 .01px #000;
         }
 
         .maintenance-table thead th {
@@ -283,27 +293,33 @@
         }
 
         .maintenance-stt {
-            width: 36px;
+            width: 26px;
+            min-width: 26px;
             text-align: center;
         }
 
         .maintenance-task-col {
-            width: 240px;
+            width: 205px;
+            min-width: 205px;
             font-weight: 600;
-            text-align: left;
+            text-align: center;
+        }
+
+        .maintenance-daily .maintenance-day {
+            width: calc((100% - 231px) / 31);
+            min-width: 0;
         }
 
         .maintenance-day {
-            width: 28px;
-            height: 34px;
+            height: 28px;
             text-align: center;
-            font-size: 14px;
-            padding: 0;
+            font-size: 11px;
+            padding: 0 1px;
         }
 
         .maintenance-daily tbody .maintenance-task-col {
-            font-size: 14px;
-            line-height: 1.2;
+            font-size: 11px;
+            line-height: 1.08;
             font-weight: 600;
         }
 
@@ -314,32 +330,32 @@
         }
 
         .maintenance-sig-row td {
-            height: 64px;
-            vertical-align: top;
-            font-size: 14px;
+            height: 46px;
+            vertical-align: middle;
+            font-size: 11px;
         }
 
         .maintenance-sig-row .maintenance-day {
-            font-size: 12px;
+            font-size: 9px;
             white-space: nowrap;
-            overflow: hidden;
+            overflow: visible;
             text-overflow: clip;
             vertical-align: middle;
             position: relative;
             text-align: center;
+            padding: 0;
         }
 
         .maintenance-operator-signature {
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%) rotate(-90deg);
-            transform-origin: center center;
-            font-size: 12px;
+            display: inline-block;
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+            font-size: 8.5px;
             font-weight: 700;
             line-height: 1;
-            letter-spacing: .6px;
+            letter-spacing: 0;
             white-space: nowrap;
+            max-height: 44px;
         }
 
         .maintenance-weekly th,
@@ -349,33 +365,35 @@
         }
 
         .maintenance-weekly td {
-            height: 36px;
+            height: 26px;
         }
 
-        .maintenance-w1 { width: 280px; }
+        .maintenance-w1 { width: 240px; }
         .maintenance-w2 { width: auto; }
-        .maintenance-w3 { width: 220px; }
+        .maintenance-w3 { width: 190px; }
 
         .maintenance-periodic td {
-            height: 44px;
+            height: 34px;
         }
 
         .maintenance-foot {
-            margin-top: 8px;
+            margin-top: 4px;
             display: flex;
             justify-content: space-between;
-            font-size: 16px;
+            font-size: 13px;
         }
 
         @media print {
             .maintenance-sheet {
-                width: 297mm;
-                min-height: 210mm;
-                margin: 0;
-                padding: 8mm 10mm;
+                width: 287mm;
+                min-height: auto;
+                height: 200mm;
+                margin: 0 auto;
+                padding: 5mm 5mm;
                 box-shadow: none;
                 break-inside: avoid-page;
                 page-break-inside: avoid;
+                overflow: hidden;
             }
 
             .maintenance-top-line,
@@ -384,6 +402,14 @@
             .maintenance-foot {
                 break-inside: avoid-page;
                 page-break-inside: avoid;
+            }
+
+            .maintenance-table,
+            .maintenance-table th,
+            .maintenance-table td {
+                border-color: #000 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
             }
         }
     </style>
@@ -755,6 +781,53 @@
                 return operators;
             }
 
+
+            function normalizeDeviceName(value) {
+                let text = safeDecode(value).trim().replace(/\s+/g, ' ');
+                text = text.replace(/^Loại tủ\s*\([^)]*\)\s*:\s*/i, '').replace(/^Loại tủ\s*:\s*/i, '').trim();
+                text = text.replace(/Người quản lý.*$/i, '').trim();
+                return text;
+            }
+
+            function getDeviceNameFromFile() {
+                const fileName = safeDecode((window.location.pathname || '').split('/').pop() || '')
+                    .replace(/\.html?$/i, '')
+                    .replace(/^\d+\s+/, '')
+                    .trim();
+                return fileName
+                    .replace(/^Tủ lạnh trữ máu\s+/i, '')
+                    .replace(/^Tủ lạnh lưu trữ mẫu\s+/i, '')
+                    .replace(/^Tủ lạnh trữ hóa chất\s+/i, '')
+                    .replace(/^Tủ đông trữ chế phẩm máu\s+/i, '')
+                    .replace(/^Tủ âm sâu\s+/i, '')
+                    .replace(/^Máy ủ lắc tiểu cầu\s+/i, '')
+                    .replace(/^Bể điều nhiệt\s+/i, '')
+                    .trim();
+            }
+
+            function getMaintenanceDeviceName(params) {
+                const fromQuery = normalizeDeviceName(params.get('tu') || params.get('ten') || '');
+                if (fromQuery) return fromQuery;
+
+                const directSelectors = ['#meta-tu', '#meta-tu-1', '#meta-tu-2'];
+                for (const selector of directSelectors) {
+                    const el = document.querySelector(selector);
+                    const text = normalizeDeviceName(el && el.textContent || '');
+                    if (text) return text;
+                }
+
+                const allTextNodes = Array.from(document.querySelectorAll('p, div, span'));
+                for (const el of allTextNodes) {
+                    const text = String(el.textContent || '').replace(/\s+/g, ' ').trim();
+                    const match = text.match(/Loại tủ\s*\([^)]*\)\s*:\s*([^|\n]+)/i) || text.match(/Loại tủ\s*:\s*([^|\n]+)/i);
+                    if (match) {
+                        const value = normalizeDeviceName(match[1]);
+                        if (value) return value;
+                    }
+                }
+
+                return getDeviceNameFromFile() || 'THIẾT BỊ';
+            }
             function escapeHtml(value) {
                 return String(value || '').replace(/[&<>"]/g, function (ch) {
                     return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch];
@@ -769,6 +842,12 @@
                 return html;
             }
 
+
+            function updateMaintenanceDeviceName() {
+                const params = new URLSearchParams(normalizeSearch());
+                const target = document.querySelector('#maintenance-form-page .maintenance-device-name');
+                if (target) target.textContent = getMaintenanceDeviceName(params);
+            }
             function renderMaintenanceForm() {
                 if (document.getElementById('maintenance-form-page')) return;
 
@@ -789,7 +868,7 @@
                             <div>Khoa XN Huyết học</div>
                         </div>
                         <div class="maintenance-title-wrap">
-                            <h1 class="maintenance-title">PHIẾU BẢO TRÌ THIẾT BỊ ....................</h1>
+                            <h1 class="maintenance-title">PHIẾU BẢO TRÌ THIẾT BỊ <span class="maintenance-device-name"></span></h1>
                             <div class="maintenance-month-line">Tháng ${escapeHtml(monthText)}/${escapeHtml(yearText)}</div>
                         </div>
                     </div>
@@ -862,6 +941,9 @@
                     </div>
                 `;
                 document.body.appendChild(sheet);
+                updateMaintenanceDeviceName();
+                setTimeout(updateMaintenanceDeviceName, 0);
+                setTimeout(updateMaintenanceDeviceName, 300);
             }
 
             if (document.readyState === 'loading') {
