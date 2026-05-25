@@ -335,14 +335,14 @@
             <div class="col" style="width: 35%; text-align:left; padding-left: 20px;">
                 <p><b>Mã nhiệt kế:</b> <span class="dots" id="meta-mnk-1"></span></p>
                 <p><b>Mã thiết bị:</b> <span class="dots" id="meta-mtb-1">HE-bb-002</span></p>
-                <p><b>Hệ số hiệu chỉnh:</b> <span class="dots" id="meta-hshc-1">………..</span></p>
+                <p><b>Hệ số hiệu chỉnh:</b> <span class="dots" id="meta-hshc-1"></span></p>
             </div>
             <div class="col" style="width: 30%; text-align:right;">
                 <p>Lưu: <span class="checkbox" id="cb-bp-1" onclick="updateLuu('1')">q</span> Mẫu BP &nbsp; <span
                         class="checkbox" id="cb-hc-1" onclick="updateLuu('2')">q</span> Hóa chất &nbsp; <span
                         class="checkbox" id="cb-k-1" onclick="updateLuu('3')">X</span> Khác:</p>
-                <p><b>Tháng:</b> <span class="dots" id="meta-m-1">……..</span> <b>Năm:</b> <span class="dots"
-                        id="meta-y-1">…………..</span></p>
+                <p><b>Tháng:</b> <span class="dots" id="meta-m-1"></span> <b>Năm:</b> <span class="dots"
+                        id="meta-y-1"></span></p>
             </div>
         </div>
 
@@ -395,14 +395,14 @@
             <div class="col" style="width: 35%; text-align:left; padding-left: 20px;">
                 <p><b>Mã nhiệt kế:</b> <span class="dots" id="meta-mnk-2"></span></p>
                 <p><b>Mã thiết bị:</b> <span class="dots" id="meta-mtb-2">HE-bb-002</span></p>
-                <p><b>Hệ số hiệu chỉnh:</b> <span class="dots" id="meta-hshc-2">………..</span></p>
+                <p><b>Hệ số hiệu chỉnh:</b> <span class="dots" id="meta-hshc-2"></span></p>
             </div>
             <div class="col" style="width: 30%; text-align:right;">
                 <p>Lưu: <span class="checkbox" id="cb-bp-2" onclick="updateLuu('1')">q</span> Mẫu BP &nbsp; <span
                         class="checkbox" id="cb-hc-2" onclick="updateLuu('2')">q</span> Hóa chất &nbsp; <span
                         class="checkbox" id="cb-k-2" onclick="updateLuu('3')">X</span> Khác:</p>
-                <p><b>Tháng:</b> <span class="dots" id="meta-m-2">……..</span> <b>Năm:</b> <span class="dots"
-                        id="meta-y-2">…………..</span></p>
+                <p><b>Tháng:</b> <span class="dots" id="meta-m-2"></span> <b>Năm:</b> <span class="dots"
+                        id="meta-y-2"></span></p>
             </div>
         </div>
 
@@ -472,7 +472,7 @@
             const mnk = params.get('mnk') || '';
             const mtb = params.get('mtb') || 'HE-bb-002';
             const nql = params.get('nql') || 'LIB001';
-            const hshc = params.get('hshc') || '………..';
+            const hshc = params.get('hshc') || '';
             const luu = params.get('luu') || '3';
 
             return { map, month, mnk, mtb, nql, hshc, luu };

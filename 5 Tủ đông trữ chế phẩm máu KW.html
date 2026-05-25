@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phiếu theo dõi nhiệt độ tủ âm -35°C</title>
+    <style>
+        :root {
+            --border: #333;
+            --grid: #444;
+            --text: #000;
+            --paper: #fff;
+            --line: #0000ff;
+            --dot: #555;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: #f0f0f0;
+            font-family: "Times New Roman", Times, serif;
+            color: var(--text);
+        }
+
+        .page {
+            width: 297mm;
+            min-height: 210mm;
+            margin: 10px auto;
+            background: var(--paper);
+            padding: 10mm;
+            position: relative;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            font-size: 11pt;
+            font-weight: bold;
+            margin-bottom: 5mm;
+            line-height: 1.4;
+        }
+
+        .title-block {
+            text-align: center;
+            margin-bottom: 5mm;
+        }
+
+        .title-block h1 {
+            margin: 0;
+            font-size: 16pt;
+            text-transform: uppercase;
+        }
+
+        .title-block .sub-title {
+            font-size: 11pt;
+            font-weight: normal;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1.2fr;
+            gap: 5mm;
+            font-size: 11pt;
+            margin-bottom: 3mm;
+        }
+
+        .meta-item {
+            margin-bottom: 2px;
+        }
+
+        .dots {
+            border-bottom: 1px dotted #000;
+            display: inline-block;
+            min-width: 30mm;
+            padding: 0 5px;
+        }
+
+        .chart-container {
+            position: relative;
+            border: 1.5px solid var(--border);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        th,
+        td {
+            border: 1px solid var(--grid);
+            text-align: center;
+            padding: 0;
+            height: 22px;
+            font-size: 10pt;
+        }
+
+        .col-temp {
+            width: 45px;
+            font-weight: bold;
+        }
+
+        .col-slot {
+            width: auto;
+        }
+
+        thead th {
+            background-color: #f9f9f9;
+        }
+
+        .day-header {
+            font-size: 11pt;
+            font-weight: bold;
+        }
+
+        .slot-header {
+            font-size: 9pt;
+        }
+
+        .dot-cell {
+            position: relative;
+            height: 25px;
+        }
+
+        .dot-cell.has-point::after {
+            content: "";
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: var(--dot);
+            border-radius: 50%;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 5;
+        }
+
+        .signature-row td {
+            height: 60px;
+            font-size: 9pt;
+            vertical-align: bottom;
+            padding-bottom: 5px;
+        }
+
+        .chart-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 3;
+        }
+
+        .footer-note {
+            margin-top: 3mm;
+            font-size: 10pt;
+            font-style: italic;
+        }
+
+        .doc-code {
+            position: absolute;
+            bottom: 10mm;
+            left: 10mm;
+            font-size: 10pt;
+        }
+
+        .print-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            z-index: 999;
+        }
+
+        @media print {
+            body {
+                background: none;
+            }
+
+            .page {
+                margin: 0;
+                box-shadow: none;
+                page-break-after: always;
+            }
+
+            .print-btn {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <button class="print-btn" onclick="window.print()">IN PHIẾU</button>
+    <div id="pages-container"></div>
+
+    <script>
+        // Dải nhiệt độ tương ứng cho tủ âm: Trống (> -31), -31, -32, -33, -34, -35, Trống (< -35)
+        const TEMPS = [-30, -31, -32, -33, -34, -35, -36];
+
+        const DAYS_PER_PAGE = 7;
+        const SLOTS_PER_DAY = 6;
+
+        function getParams() {
+            const search = window.location.search || '';
+            const normalizedSearch = search.replace(/\?/g, '&').replace(/^&+/, '');
+            const params = new URLSearchParams(normalizedSearch);
+
+            return {
+                thang: params.get('thang') || '',
+                tu: params.get('tu') || '',
+                data: params.get('data') || '',
+                mnk: params.get('mnk') || '',
+                mtb: params.get('mtb') || '',
+                nql: params.get('nql') || '',
+                hshc: params.get('hshc') || ''
+            };
+        }
+
+        function parseData(dataStr) {
+            const map = {};
+            if (!dataStr) return map;
+
+            const items = dataStr.split('|');
+            items.forEach(item => {
+                const match = item.match(/^(\d+)L(\d+)(-?\d+)(?:_(.*))?$/);
+                if (match) {
+                    const day = parseInt(match[1]);
+                    const slot = parseInt(match[2]);
+                    const temp = parseInt(match[3]);
+                    const name = match[4] || '';
+                    if (!map[day]) map[day] = {};
+                    map[day][slot] = { temp, name };
+                }
+            });
+            return map;
+        }
+
+        function getDaysInMonth(monthStr) {
+            if (!monthStr) return 31;
+            const cleanMonth = monthStr.split(/[?&]/)[0];
+            const parts = cleanMonth.split('/');
+            const year = parseInt(parts[0]);
+            const month = parseInt(parts[1]);
+            if (isNaN(year) || isNaN(month)) return 31;
+            return new Date(year, month, 0).getDate();
+        }
+
+        function renderPage(pageIdx, startDay, endDay, monthStr, meta, dataMap) {
+            const daysCount = endDay - startDay + 1;
+            const cleanMonth = monthStr.split(/[?&]/)[0];
+            const monthParts = cleanMonth.split('/');
+            const year = monthParts[0] || '';
+            const month = monthParts[1] || '';
+
+            const container = document.getElementById('pages-container');
+            const pageEl = document.createElement('div');
+            pageEl.className = 'page';
+            pageEl.id = `page-${pageIdx}`;
+
+            let html = `
+                <div class="header-top">
+                    <div>
+                        <div>Bệnh viện Nhi Đồng 1</div>
+                        <div style="font-weight: normal; font-style: italic;">Ban QLCLXN</div>
+                        <div>Khoa Xét nghiệm Huyết học</div>
+                    </div>
+                    <div style="font-weight: normal; max-width: 50%; text-align: right;">
+                        Phiếu theo dõi nhiệt độ tủ âm trữ huyết tương, tủa lạnh -35°C
+                    </div>
+                </div>
+                <div class="title-block">
+                    <h1>PHIẾU THEO DÕI NHIỆT ĐỘ TỦ ÂM TRỮ HUYẾT TƯƠNG, TỦA LẠNH -35°C</h1>
+                    <div class="sub-title">(TRANG ${pageIdx + 1})</div>
+                </div>
+                <div class="meta-grid">
+                    <div>
+                        <div class="meta-item"><b>Loại tủ (-35°C):</b> Tủ trữ CPM - KW</div>
+                        <div class="meta-item"><b>Người quản lý:</b> LIB001</div>
+                    </div>
+                    <div>
+                        <div class="meta-item"><b>Mã thiết bị:</b> HE-bb-004</div>
+                        <div class="meta-item"><b>Mã nhiệt kế:</b> HE-bb-042</div>
+                        <div class="meta-item"><b>Hệ số hiệu chỉnh:</b> <span class="dots">${meta.hshc || ''}</span></div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="meta-item"><b>Lưu:</b> q Mẫu BP &nbsp; q Hóa chất &nbsp; <b>X</b> Khác: ..........</div>
+                        <div class="meta-item"><b>Tháng:</b> <span class="dots" style="min-width:15mm">${month}</span> <b>Năm:</b> <span class="dots" style="min-width:20mm">${year}</span></div>
+                    </div>
+                </div>
+                <div class="chart-container" id="chart-cont-${pageIdx}">
+                    <svg class="chart-svg" id="svg-${pageIdx}"></svg>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th rowspan="2" class="col-temp">Ngày</th>
+                                ${Array.from({ length: daysCount }, (_, i) => `<th colspan="${SLOTS_PER_DAY}" class="day-header">${startDay + i}</th>`).join('')}
+                            </tr>
+                            <tr>
+                                ${Array.from({ length: daysCount * SLOTS_PER_DAY }, (_, i) => `<th class="slot-header">${(i % SLOTS_PER_DAY) + 1}</th>`).join('')}
+                            </tr>
+                            <tr>
+                                <th class="col-temp">T°</th>
+                                ${Array.from({ length: daysCount * SLOTS_PER_DAY }, () => `<th></th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${TEMPS.map(t => `
+                                <tr>
+                                    <td class="col-temp">${(t === -30 || t === -36) ? '' : t}</td>
+                                    ${Array.from({ length: daysCount }, (_, dIdx) => {
+                const d = startDay + dIdx;
+                return Array.from({ length: SLOTS_PER_DAY }, (_, sIdx) => {
+                    const s = sIdx + 1;
+                    const tempRaw = (dataMap[d] && dataMap[d][s]) ? dataMap[d][s].temp : null;
+                    let isPoint = false;
+                    if (tempRaw !== null) {
+                        if (t === -30) isPoint = tempRaw > -31;
+                        else if (t === -36) isPoint = tempRaw < -35;
+                        else isPoint = tempRaw === t;
+                    }
+                    return `<td class="dot-cell ${isPoint ? 'has-point' : ''}" data-day="${d}" data-slot="${s}" data-temp="${t}"></td>`;
+                }).join('');
+            }).join('')}
+                                </tr>
+                            `).join('')}
+                            <tr class="signature-row">
+                                <td class="col-temp">Tên</td>
+                                ${Array.from({ length: daysCount }, (_, dIdx) => {
+                const d = startDay + dIdx;
+                return Array.from({ length: SLOTS_PER_DAY }, (_, sIdx) => {
+                    const s = sIdx + 1;
+                    const name = (dataMap[d] && dataMap[d][s]) ? dataMap[d][s].name : '';
+                    return `<td style="writing-mode: vertical-rl; transform: rotate(180deg);">${name}</td>`;
+                }).join('');
+            }).join('')}
+                            </tr>
+                            <tr class="signature-row">
+                                <td class="col-temp" style="font-weight: bold;">Trưởng bộ phận</td>
+                                <td colspan="${daysCount * SLOTS_PER_DAY}" style="text-align: center; font-weight: bold; font-size: 11pt; vertical-align: middle;">LIB001</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="footer-note" style="line-height: 1.8;">
+                    <div>Lần 1-7:00, Lần 2-11:00, Lần 3-15:00, Lần 4-19:00, Lần 5-23:00, Lần 6-3:00</div>
+                    <div style="border-bottom: 1px dotted #000; margin-top: 10px;"></div>
+                    <div style="border-bottom: 1px dotted #000; margin-top: 15px;"></div>
+                    <div style="border-bottom: 1px dotted #000; margin-top: 15px;"></div>
+                    <div style="border-bottom: 1px dotted #000; margin-top: 15px;"></div>
+                </div>
+                <div class="doc-code">FM-EQ-HE-003 V4.0</div>
+            `;
+
+            pageEl.innerHTML = html;
+            container.appendChild(pageEl);
+        }
+
+        function drawLines(pageIdx, startDay, endDay, dataMap) {
+            const svg = document.getElementById(`svg-${pageIdx}`);
+            const container = document.getElementById(`chart-cont-${pageIdx}`);
+            const rect = container.getBoundingClientRect();
+
+            svg.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`);
+            svg.innerHTML = '';
+
+            const points = [];
+            for (let d = startDay; d <= endDay; d++) {
+                if (!dataMap[d]) continue;
+                for (let s = 1; s <= SLOTS_PER_DAY; s++) {
+                    if (!dataMap[d][s]) continue;
+                    const val = dataMap[d][s].temp;
+                    let targetTemp = val;
+                    if (val > -31) targetTemp = -30;
+                    else if (val < -35) targetTemp = -36;
+
+                    const cell = document.querySelector(`#page-${pageIdx} td[data-day="${d}"][data-slot="${s}"][data-temp="${targetTemp}"]`);
+                    if (cell) {
+                        const cRect = cell.getBoundingClientRect();
+                        points.push({
+                            x: (cRect.left + cRect.width / 2) - rect.left,
+                            y: (cRect.top + cRect.height / 2) - rect.top
+                        });
+                    }
+                }
+            }
+
+            if (points.length < 2) return;
+
+            const path = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+            path.setAttribute("points", points.map(p => `${p.x},${p.y}`).join(' '));
+            path.setAttribute("stroke", "blue");
+            path.setAttribute("stroke-width", "1");
+            path.setAttribute("fill", "none");
+            svg.appendChild(path);
+        }
+
+        function init() {
+            const params = getParams();
+            const dataMap = parseData(params.data);
+            const totalDays = getDaysInMonth(params.thang);
+            const totalPages = Math.ceil(totalDays / DAYS_PER_PAGE);
+
+            for (let i = 0; i < totalPages; i++) {
+                const startDay = i * DAYS_PER_PAGE + 1;
+                const endDay = Math.min((i + 1) * DAYS_PER_PAGE, totalDays);
+                renderPage(i, startDay, endDay, params.thang, params, dataMap);
+            }
+
+            setTimeout(() => {
+                for (let i = 0; i < totalPages; i++) {
+                    const startDay = i * DAYS_PER_PAGE + 1;
+                    const endDay = Math.min((i + 1) * DAYS_PER_PAGE, totalDays);
+                    drawLines(i, startDay, endDay, dataMap);
+                }
+            }, 500);
+        }
+
+        window.onload = init;
+        window.onresize = () => {
+            const params = getParams();
+            const dataMap = parseData(params.data);
+            const totalDays = getDaysInMonth(params.thang);
+            const totalPages = Math.ceil(totalDays / DAYS_PER_PAGE);
+            for (let i = 0; i < totalPages; i++) {
+                const startDay = i * DAYS_PER_PAGE + 1;
+                const endDay = Math.min((i + 1) * DAYS_PER_PAGE, totalDays);
+                drawLines(i, startDay, endDay, dataMap);
+            }
+        };
+    </script>
+</body>
+
+</html>
