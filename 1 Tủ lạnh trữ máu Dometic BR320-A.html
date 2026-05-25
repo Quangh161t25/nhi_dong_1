@@ -101,18 +101,28 @@
 
         .meta .checkbox {
             display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 1px solid #333;
             margin-right: 2px;
             vertical-align: middle;
             text-align: center;
-            font-size: 14px;
+            font-size: 12px;
+            line-height: 12px;
             cursor: pointer;
             font-weight: bold;
         }
 
         .meta .checkbox:hover {
-            color: #1d4ed8;
+            border-color: #1d4ed8;
+            background: #f0f4ff;
         }
 
+        .meta .checkbox.checked::after {
+            content: '✓';
+            font-weight: bold;
+            display: block;
+        }
         .chart-wrap {
             position: relative;
             border: 1px solid var(--border);
@@ -306,6 +316,193 @@
             }
         }
     </style>
+
+    <style id="maintenance-form-style">
+        .maintenance-sheet {
+            width: 297mm;
+            min-height: 210mm;
+            margin: 10px auto;
+            padding: 8mm 10mm;
+            background: #fff;
+            color: #111;
+            font-family: "Times New Roman", Times, serif;
+            page-break-before: always;
+            page-break-after: auto;
+            box-shadow: 0 0 10px rgba(0, 0, 0, .1);
+        }
+
+        .maintenance-sheet * {
+            box-sizing: border-box;
+        }
+
+        .maintenance-top-line {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .maintenance-unit {
+            line-height: 1.2;
+            font-size: 24px;
+            font-weight: normal;
+            text-align: left;
+        }
+
+        .maintenance-title-wrap {
+            text-align: center;
+            flex: 1;
+        }
+
+        .maintenance-title {
+            margin: 0;
+            font-size: 36px;
+            font-weight: 700;
+            letter-spacing: .5px;
+        }
+
+        .maintenance-month-line {
+            margin-top: 6px;
+            font-size: 22px;
+        }
+
+        .maintenance-section-title {
+            margin: 12px 0 6px;
+            font-size: 26px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .maintenance-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            position: static;
+            z-index: auto;
+        }
+
+        .maintenance-table th,
+        .maintenance-table td {
+            border: 1px solid #222;
+            padding: 3px 5px;
+            font-size: 16px;
+            height: auto;
+            vertical-align: middle;
+            text-align: center;
+            font-weight: normal;
+            color: #111;
+            background: #fff;
+        }
+
+        .maintenance-table thead th {
+            font-weight: 700;
+        }
+
+        .maintenance-stt {
+            width: 36px;
+            text-align: center;
+        }
+
+        .maintenance-task-col {
+            width: 240px;
+            font-weight: 600;
+            text-align: left;
+        }
+
+        .maintenance-day {
+            width: 28px;
+            height: 34px;
+            text-align: center;
+            font-size: 14px;
+            padding: 0;
+        }
+
+        .maintenance-daily tbody .maintenance-task-col {
+            font-size: 14px;
+            line-height: 1.2;
+            font-weight: 600;
+        }
+
+        .maintenance-tick {
+            font-size: 16px;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .maintenance-sig-row td {
+            height: 64px;
+            vertical-align: top;
+            font-size: 14px;
+        }
+
+        .maintenance-sig-row .maintenance-day {
+            font-size: 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: clip;
+            vertical-align: middle;
+            position: relative;
+            text-align: center;
+        }
+
+        .maintenance-operator-signature {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%) rotate(-90deg);
+            transform-origin: center center;
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1;
+            letter-spacing: .6px;
+            white-space: nowrap;
+        }
+
+        .maintenance-weekly th,
+        .maintenance-periodic th {
+            text-align: center;
+            font-weight: 700;
+        }
+
+        .maintenance-weekly td {
+            height: 36px;
+        }
+
+        .maintenance-w1 { width: 280px; }
+        .maintenance-w2 { width: auto; }
+        .maintenance-w3 { width: 220px; }
+
+        .maintenance-periodic td {
+            height: 44px;
+        }
+
+        .maintenance-foot {
+            margin-top: 8px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 16px;
+        }
+
+        @media print {
+            .maintenance-sheet {
+                width: 297mm;
+                min-height: 210mm;
+                margin: 0;
+                padding: 8mm 10mm;
+                box-shadow: none;
+                break-inside: avoid-page;
+                page-break-inside: avoid;
+            }
+
+            .maintenance-top-line,
+            .maintenance-section-title,
+            .maintenance-table,
+            .maintenance-foot {
+                break-inside: avoid-page;
+                page-break-inside: avoid;
+            }
+        }
+    </style>
 </head>
 
 <body>
@@ -338,9 +535,9 @@
                 <p><b>Hệ số hiệu chỉnh:</b> <span class="dots" id="meta-hshc-1"></span></p>
             </div>
             <div class="col" style="width: 30%; text-align:right;">
-                <p>Lưu: <span class="checkbox" id="cb-bp-1" onclick="updateLuu('1')">q</span> Mẫu BP &nbsp; <span
-                        class="checkbox" id="cb-hc-1" onclick="updateLuu('2')">q</span> Hóa chất &nbsp; <span
-                        class="checkbox" id="cb-k-1" onclick="updateLuu('3')">X</span> Khác:</p>
+                <p>Lưu: <span class="checkbox" id="cb-bp-1" onclick="updateLuu('1')"></span> Mẫu BP &nbsp; <span
+                        class="checkbox" id="cb-hc-1" onclick="updateLuu('2')"></span> Hóa chất &nbsp; <span
+                        class="checkbox checked" id="cb-k-1" onclick="updateLuu('3')"></span> Khác:</p>
                 <p><b>Tháng:</b> <span class="dots" id="meta-m-1"></span> <b>Năm:</b> <span class="dots"
                         id="meta-y-1"></span></p>
             </div>
@@ -398,9 +595,9 @@
                 <p><b>Hệ số hiệu chỉnh:</b> <span class="dots" id="meta-hshc-2"></span></p>
             </div>
             <div class="col" style="width: 30%; text-align:right;">
-                <p>Lưu: <span class="checkbox" id="cb-bp-2" onclick="updateLuu('1')">q</span> Mẫu BP &nbsp; <span
-                        class="checkbox" id="cb-hc-2" onclick="updateLuu('2')">q</span> Hóa chất &nbsp; <span
-                        class="checkbox" id="cb-k-2" onclick="updateLuu('3')">X</span> Khác:</p>
+                <p>Lưu: <span class="checkbox" id="cb-bp-2" onclick="updateLuu('1')"></span> Mẫu BP &nbsp; <span
+                        class="checkbox" id="cb-hc-2" onclick="updateLuu('2')"></span> Hóa chất &nbsp; <span
+                        class="checkbox checked" id="cb-k-2" onclick="updateLuu('3')"></span> Khác:</p>
                 <p><b>Tháng:</b> <span class="dots" id="meta-m-2"></span> <b>Năm:</b> <span class="dots"
                         id="meta-y-2"></span></p>
             </div>
@@ -559,10 +756,10 @@
                 const boxes = { '1': `cb-bp-${p}`, '2': `cb-hc-${p}`, '3': `cb-k-${p}` };
                 Object.values(boxes).forEach(id => {
                     const el = document.getElementById(id);
-                    if (el) el.textContent = 'q';
+                    if (el) el.classList.remove('checked');
                 });
                 const target = document.getElementById(boxes[val]);
-                if (target) target.textContent = 'X';
+                if (target) target.classList.add('checked');
             });
         }
 
@@ -644,6 +841,239 @@
                 mediaQueryList.addListener(onPrintMediaChange);
             }
         }
+    </script>
+    <script id="maintenance-form-script">
+        (function () {
+            function safeDecode(value) {
+                let output = String(value || '').replace(/\+/g, ' ');
+                for (let i = 0; i < 2; i++) {
+                    try {
+                        const decoded = decodeURIComponent(output);
+                        if (decoded === output) break;
+                        output = decoded;
+                    } catch (err) {
+                        break;
+                    }
+                }
+                return output;
+            }
+
+            function normalizeSearch() {
+                return (window.location.search || '').replace(/^\?/, '').replace(/\?/g, '&');
+            }
+
+            function splitMonth(value) {
+                const normalized = safeDecode(value).trim().replace(/[-.]/g, '/');
+                const parts = normalized.split('/').filter(Boolean);
+                if (parts.length >= 2) return { year: parts[0], month: parts[1].padStart(2, '0') };
+                return { year: '', month: normalized };
+            }
+
+            function expandEntries(value) {
+                return safeDecode(value)
+                    .split(/[|&,;]/)
+                    .map(function (item) { return item.trim().replace(/[.=]+$/, ''); })
+                    .filter(Boolean);
+            }
+
+            function collectEntriesFromParams(params) {
+                const entries = [];
+                for (const [key, value] of params.entries()) {
+                    const decodedKey = safeDecode(key).trim();
+                    const decodedValue = safeDecode(value).trim();
+                    if (decodedKey === 'data' || decodedKey === 'entries') {
+                        entries.push.apply(entries, expandEntries(decodedValue));
+                    } else if (/^\d{1,2}[SC]/i.test(decodedKey) || /^\d{1,2}L\d/i.test(decodedKey)) {
+                        entries.push(decodedKey + (decodedValue ? '_' + decodedValue : ''));
+                    }
+                }
+                return entries;
+            }
+
+            function collectEntries() {
+                const search = normalizeSearch();
+                const entries = [];
+                entries.push.apply(entries, collectEntriesFromParams(new URLSearchParams(search)));
+                entries.push.apply(entries, collectEntriesFromParams(new URLSearchParams(safeDecode(search))));
+
+                safeDecode(search).split('&').forEach(function (part) {
+                    const item = part.trim();
+                    if (!item) return;
+                    const equalIndex = item.indexOf('=');
+                    const key = equalIndex >= 0 ? item.slice(0, equalIndex) : item;
+                    const value = equalIndex >= 0 ? item.slice(equalIndex + 1) : '';
+                    if (key === 'data' || key === 'entries') {
+                        entries.push.apply(entries, expandEntries(value));
+                    } else if (/^\d{1,2}[SC]/i.test(key) || /^\d{1,2}L\d/i.test(key)) {
+                        entries.push(key + (value ? '_' + value : ''));
+                    }
+                });
+
+                return Array.from(new Set(entries.map(function (item) {
+                    return item.trim().replace(/[.=]+$/, '');
+                }).filter(Boolean)));
+            }
+
+            function cleanOperatorName(raw) {
+                let name = safeDecode(raw).trim();
+                name = name.replace(/^[\s_=:-]+/, '');
+                name = name.replace(/^t?-?\d+(?:[.,]\d+)?/i, '');
+                name = name.replace(/^[\s_=:-]+/, '');
+                name = name.replace(/^a\d*(?:[.,]\d+)?/i, '');
+                name = name.replace(/^[\s_=:-]+/, '');
+                name = name.replace(/^\d+(?:[.,]\d+)?[\s_=:-]+/, '');
+                return name.trim();
+            }
+
+            function parseOperators() {
+                const operators = {};
+                const firstSlotFallback = {};
+
+                collectEntries().forEach(function (entry) {
+                    let match = entry.match(/^(\d{1,2})([SC])(.*)$/i);
+                    if (match) {
+                        const day = Number(match[1]);
+                        const session = match[2].toUpperCase();
+                        const name = cleanOperatorName(match[3]);
+                        if (session === 'S' && name && !operators[day]) operators[day] = name;
+                        return;
+                    }
+
+                    match = entry.match(/^(\d{1,2})L(\d+)(.*)$/i);
+                    if (match) {
+                        const day = Number(match[1]);
+                        const slot = Number(match[2]);
+                        const name = cleanOperatorName(match[3]);
+                        if (!name) return;
+                        if (!firstSlotFallback[day] || slot < firstSlotFallback[day].slot) {
+                            firstSlotFallback[day] = { slot: slot, name: name };
+                        }
+                        if (slot === 1 && !operators[day]) operators[day] = name;
+                    }
+                });
+
+                Object.keys(firstSlotFallback).forEach(function (day) {
+                    if (!operators[day]) operators[day] = firstSlotFallback[day].name;
+                });
+
+                return operators;
+            }
+
+            function escapeHtml(value) {
+                return String(value || '').replace(/[&<>"]/g, function (ch) {
+                    return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch];
+                });
+            }
+
+            function dayCells(contentFactory) {
+                let html = '';
+                for (let day = 1; day <= 31; day++) {
+                    html += '<td class="maintenance-day">' + contentFactory(day) + '</td>';
+                }
+                return html;
+            }
+
+            function renderMaintenanceForm() {
+                if (document.getElementById('maintenance-form-page')) return;
+
+                const params = new URLSearchParams(normalizeSearch());
+                const monthParts = splitMonth(params.get('thang') || '');
+                const operators = parseOperators();
+                const monthText = monthParts.month || '......';
+                const yearText = monthParts.year || '........';
+
+                const sheet = document.createElement('div');
+                sheet.className = 'maintenance-sheet';
+                sheet.id = 'maintenance-form-page';
+                sheet.innerHTML = `
+                    <div class="maintenance-top-line">
+                        <div class="maintenance-unit">
+                            <div>Bệnh viện Nhi Đồng 1</div>
+                            <div>Ban QLCLXN</div>
+                            <div>Khoa XN Huyết học</div>
+                        </div>
+                        <div class="maintenance-title-wrap">
+                            <h1 class="maintenance-title">PHIẾU BẢO TRÌ THIẾT BỊ ....................</h1>
+                            <div class="maintenance-month-line">Tháng ${escapeHtml(monthText)}/${escapeHtml(yearText)}</div>
+                        </div>
+                    </div>
+
+                    <div class="maintenance-section-title">I. Bảo dưỡng hằng ngày: (Người sử dụng thực hiện)</div>
+                    <table class="maintenance-table maintenance-daily">
+                        <thead>
+                            <tr>
+                                <th class="maintenance-stt">S<br>T<br>T</th>
+                                <th class="maintenance-task-col">Ngày</th>
+                                ${dayCells(function (day) { return day; })}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="maintenance-stt">1</td>
+                                <td class="maintenance-task-col">Vệ sinh màn hình, bàn phím, bệ mặt máy bằng dung dịch khử khuẩn.</td>
+                                ${dayCells(function (day) { return operators[day] ? '<span class="maintenance-tick">✓</span>' : ''; })}
+                            </tr>
+                            <tr>
+                                <td class="maintenance-stt">2</td>
+                                <td class="maintenance-task-col">Kiểm tra tình trạng máy (điện, hóa chất, vật tư tiêu hao)</td>
+                                ${dayCells(function (day) { return operators[day] ? '<span class="maintenance-tick">✓</span>' : ''; })}
+                            </tr>
+                            <tr class="maintenance-sig-row">
+                                <td class="maintenance-stt">3</td>
+                                <td class="maintenance-task-col">Người thực hiện</td>
+                                ${dayCells(function (day) { return operators[day] ? '<span class="maintenance-operator-signature">' + escapeHtml(operators[day]) + '</span>' : ''; })}
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="maintenance-section-title">II. Bảo dưỡng hằng tuần: (Người sử dụng thực hiện)</div>
+                    <table class="maintenance-table maintenance-weekly">
+                        <thead>
+                            <tr>
+                                <th class="maintenance-w1">Thời gian thực hiện</th>
+                                <th class="maintenance-w2">Nội dung thực hiện</th>
+                                <th class="maintenance-w3">Người thực hiện</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Tuần 1 (ngày....................)</td><td></td><td></td></tr>
+                            <tr><td>Tuần 2 (ngày....................)</td><td></td><td></td></tr>
+                            <tr><td>Tuần 3 (ngày....................)</td><td></td><td></td></tr>
+                            <tr><td>Tuần 4 (ngày....................)</td><td></td><td></td></tr>
+                        </tbody>
+                    </table>
+
+                    <div class="maintenance-section-title">III. Bảo dưỡng tháng/ quý/ 6 tháng/ 12 tháng : KS công ty thực hiện</div>
+                    <table class="maintenance-table maintenance-periodic">
+                        <thead>
+                            <tr>
+                                <th style="width:45%;">NỘI DUNG BẢO TRÌ</th>
+                                <th colspan="2">Ngày ..........Tháng ..............Năm...............</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Thực hiện theo nội dung của phụ lục bảo trì thiết bị (SD-EQ-AL-003/1001)</td>
+                                <td style="width:27%;">KS thực hiện:</td>
+                                <td style="width:28%;">NV tiếp nhận:</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="maintenance-foot">
+                        <div>FM-EQ-HE-006 V2.0</div>
+                        <div>Ngày hiệu lực 01/05/2021</div>
+                    </div>
+                `;
+                document.body.appendChild(sheet);
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', renderMaintenanceForm);
+            } else {
+                renderMaintenanceForm();
+            }
+        })();
     </script>
 </body>
 
