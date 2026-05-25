@@ -383,16 +383,43 @@
                 }
             }
 
+            let dataEntries = [];
+            if (raw) {
+                dataEntries.push(raw);
+            }
+            for (const [key, value] of params.entries()) {
+                if (key !== 'data' && /^\d{1,2}[SC]/i.test(key)) {
+                    dataEntries.push(key + (value ? '=' + value : ''));
+                }
+            }
+
             const map = {};
-            (raw || '').split('|').forEach(item => {
-                const m = item.match(/^(\d{1,2})([SC])(-?\d+)_(.*)$/i);
-                if (!m) return;
-                const day = Number(m[1]);
-                const session = m[2].toUpperCase();
-                const temp = Number(m[3]);
-                const sign = m[4] || '';
-                if (!map[day]) map[day] = {};
-                map[day][session] = { temp, sign };
+            dataEntries.join('|').split(/[|&]/).forEach(item => {
+                const trimmed = item.trim();
+                if (!trimmed) return;
+
+                // Phân tích cú pháp theo định dạng mới (25S_t-77_a_THB010)
+                let m = trimmed.match(/^(\d{1,2})([SC])_t(-?\d+)_a(\d+)?_?(.+)?$/i);
+                if (m) {
+                    const day = Number(m[1]);
+                    const session = m[2].toUpperCase();
+                    const temp = Number(m[3]);
+                    const sign = m[5] || '';
+                    if (!map[day]) map[day] = {};
+                    map[day][session] = { temp, sign };
+                    return;
+                }
+
+                // Phân tích cú pháp theo định dạng cũ (25S-77_THB010)
+                m = trimmed.match(/^(\d{1,2})([SC])(-?\d+)_(.*)$/i);
+                if (m) {
+                    const day = Number(m[1]);
+                    const session = m[2].toUpperCase();
+                    const temp = Number(m[3]);
+                    const sign = m[4] || '';
+                    if (!map[day]) map[day] = {};
+                    map[day][session] = { temp, sign };
+                }
             });
 
             return { map, month, tu, mnk, mtb, nql, hshc, luu };
@@ -425,8 +452,8 @@
                 for (let d = startDay; d <= endDay; d++) {
                     const m = dataMap[d]?.S?.temp;
                     const c = dataMap[d]?.C?.temp;
-                    html += `<td class="dot-cell ${m === t ? 'has-point' : ''}" data-key="d${d}-S"></td>`;
-                    html += `<td class="dot-cell ${c === t ? 'has-point' : ''}" data-key="d${d}-C"></td>`;
+                    html += `<td class="dot-cell ${m === t ? 'has-point' : ''}" data-key="${m === t ? `d${d}-S` : ''}"></td>`;
+                    html += `<td class="dot-cell ${c === t ? 'has-point' : ''}" data-key="${c === t ? `d${d}-C` : ''}"></td>`;
                 }
                 html += `</tr>`;
             });
@@ -497,8 +524,8 @@
             for (let d = startDay; d <= endDay; d++) {
                 const m = document.querySelector(`[data-key="d${d}-S"]`);
                 const c = document.querySelector(`[data-key="d${d}-C"]`);
-                if (m && m.classList.contains('has-point')) points.push(getCellCenter(m, wrap));
-                if (c && c.classList.contains('has-point')) points.push(getCellCenter(c, wrap));
+                if (m) points.push(getCellCenter(m, wrap));
+                if (c) points.push(getCellCenter(c, wrap));
             }
 
             svg.innerHTML = '';
