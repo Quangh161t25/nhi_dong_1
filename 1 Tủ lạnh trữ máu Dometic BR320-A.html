@@ -1009,10 +1009,7 @@
                     .trim();
             }
 
-            function getMaintenanceDeviceName(params) {
-                const fromQuery = normalizeDeviceName(params.get('tu') || params.get('ten') || '');
-                if (fromQuery) return fromQuery;
-
+            function getVisibleLoaiTuName() {
                 const directSelectors = ['#meta-tu', '#meta-tu-1', '#meta-tu-2'];
                 for (const selector of directSelectors) {
                     const el = document.querySelector(selector);
@@ -1029,6 +1026,21 @@
                         if (value) return value;
                     }
                 }
+
+                return '';
+            }
+
+            function getMaintenanceDeviceName(params, preferVisible) {
+                if (preferVisible) {
+                    const visible = getVisibleLoaiTuName();
+                    if (visible) return visible;
+                }
+
+                const fromQuery = normalizeDeviceName(params.get('tu') || params.get('ten') || '');
+                if (fromQuery) return fromQuery;
+
+                const visible = getVisibleLoaiTuName();
+                if (visible) return visible;
 
                 return getDeviceNameFromFile() || 'THIẾT BỊ';
             }
@@ -1050,7 +1062,7 @@
             function updateMaintenanceDeviceName() {
                 const params = new URLSearchParams(normalizeSearch());
                 const target = document.querySelector('#maintenance-form-page .maintenance-device-name');
-                if (target) target.textContent = getMaintenanceDeviceName(params);
+                if (target) target.textContent = getMaintenanceDeviceName(params, true);
             }
             function renderMaintenanceForm() {
                 if (document.getElementById('maintenance-form-page')) return;
@@ -1148,7 +1160,10 @@
                 updateMaintenanceDeviceName();
                 setTimeout(updateMaintenanceDeviceName, 0);
                 setTimeout(updateMaintenanceDeviceName, 300);
+                setTimeout(updateMaintenanceDeviceName, 1000);
             }
+
+            window.addEventListener('load', updateMaintenanceDeviceName);
 
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', renderMaintenanceForm);
