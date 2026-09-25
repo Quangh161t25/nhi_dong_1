@@ -37,8 +37,8 @@
 ---
 
 ### 5. Kế hoạch chuyển đổi sang Email Bệnh viện
-* [ ] Tạo tài khoản GitHub liên kết với Email bệnh viện.
-* [ ] Tạo API từ Email bệnh viện.
+* [ ] Tạo tài khoản GitHub liên kết với Email bệnh viện.  nhidong1.github
+* [ ] Tạo API từ Email bệnh viện. nhidong1
 * [ ] Đẩy mã nguồn (source code) lên repository mới.
 * [ ] Sao chép (Copy) và phân quyền lại ứng dụng AppSheet.
 
