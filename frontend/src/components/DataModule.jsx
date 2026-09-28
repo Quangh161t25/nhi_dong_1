@@ -74,37 +74,25 @@ export default function DataModule({ onBack, usersList = [] }) {
 
   // Visible Columns state
   const [visibleColumns, setVisibleColumns] = useState(() => {
+    const defaultCols = {
+      ten: true,
+      ngay_h: true,
+      khung_h: true,
+      vi_tri: true,
+      nguong: true,
+      nhiet_do: true,
+      nguong_do_am: true,
+      do_am: true,
+      ket_qua: true,
+      id_nv: true,
+      chu_ky: true,
+      ghi_chu: true,
+    };
     try {
       const saved = localStorage.getItem('data_table_columns');
-      return saved
-        ? JSON.parse(saved)
-        : {
-            ten: true,
-            ngay_h: true,
-            khung_h: true,
-            vi_tri: true,
-            nguong: true,
-            nhiet_do: true,
-            do_am: true,
-            ket_qua: true,
-            id_nv: true,
-            chu_ky: true,
-            ghi_chu: true,
-          };
+      return saved ? { ...defaultCols, ...JSON.parse(saved) } : defaultCols;
     } catch {
-      return {
-        ten: true,
-        ngay_h: true,
-        khung_h: true,
-        vi_tri: true,
-        nguong: true,
-        nhiet_do: true,
-        do_am: true,
-        ket_qua: true,
-        id_nv: true,
-        chu_ky: true,
-        ghi_chu: true,
-      };
+      return defaultCols;
     }
   });
 
@@ -143,6 +131,7 @@ export default function DataModule({ onBack, usersList = [] }) {
     vi_tri: 160,
     nguong: 120,
     nhiet_do: 110,
+    nguong_do_am: 115,
     do_am: 100,
     ket_qua: 110,
     id_nv: 110,
@@ -414,6 +403,7 @@ export default function DataModule({ onBack, usersList = [] }) {
       'Min (°C)',
       'Max (°C)',
       'Nhiệt Độ Đo (°C)',
+      'Ngưỡng Độ Ẩm (%)',
       'Độ Ẩm Min (%)',
       'Độ Ẩm Max (%)',
       'Độ Ẩm Đo (%)',
@@ -435,6 +425,7 @@ export default function DataModule({ onBack, usersList = [] }) {
       `"${r.nhiet_do_min}"`,
       `"${r.nhiet_do_max}"`,
       `"${r.nhiet_do_do_dc}"`,
+      `"${r.do_am_min && r.do_am_max ? `${r.do_am_min} ~ ${r.do_am_max}%` : r.do_am_max ? `≤ ${r.do_am_max}%` : r.do_am_min ? `≥ ${r.do_am_min}%` : ''}"`,
       `"${r.do_am_min}"`,
       `"${r.do_am_max}"`,
       `"${r.do_am_do_dc}"`,
@@ -482,6 +473,7 @@ export default function DataModule({ onBack, usersList = [] }) {
     { key: 'vi_tri', label: 'Vị trí' },
     { key: 'nguong', label: 'Ngưỡng (°C)' },
     { key: 'nhiet_do', label: 'Nhiệt độ (°C)' },
+    { key: 'nguong_do_am', label: 'Ngưỡng ẩm (%)' },
     { key: 'do_am', label: 'Độ ẩm (%)' },
     { key: 'ket_qua', label: 'Kết quả' },
     { key: 'id_nv', label: 'Nhân viên' },
@@ -939,6 +931,25 @@ export default function DataModule({ onBack, usersList = [] }) {
                       </th>
                     )}
 
+                    {/* Ngưỡng độ ẩm */}
+                    {visibleColumns.nguong_do_am && (
+                      <th
+                        className="px-3 py-2 border-b border-r border-slate-200 text-center relative whitespace-nowrap"
+                        style={{
+                          width: `${columnWidths.nguong_do_am}px`,
+                          minWidth: `${columnWidths.nguong_do_am}px`,
+                        }}
+                      >
+                        <span className="truncate">Ngưỡng ẩm (%)</span>
+                        <div
+                          onMouseDown={(e) => startResize('nguong_do_am', e)}
+                          className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-blue-400 active:bg-blue-600 transition-colors z-20 flex justify-end items-center pr-0.5 group"
+                        >
+                          <div className="w-[1px] h-3 bg-slate-300 group-hover:bg-blue-600" />
+                        </div>
+                      </th>
+                    )}
+
                     {/* Độ ẩm đo */}
                     {visibleColumns.do_am && (
                       <th
@@ -1119,6 +1130,19 @@ export default function DataModule({ onBack, usersList = [] }) {
                             <span className="font-extrabold text-sm text-slate-900">
                               {r.nhiet_do_do_dc !== '' ? r.nhiet_do_do_dc : '—'}
                             </span>
+                          </td>
+                        )}
+
+                        {/* Ngưỡng độ ẩm */}
+                        {visibleColumns.nguong_do_am && (
+                          <td className="px-3 py-2.5 border-b border-r border-slate-100 text-center whitespace-nowrap text-slate-600 font-mono text-[11px]">
+                            {r.do_am_min && r.do_am_max
+                              ? `${r.do_am_min} ~ ${r.do_am_max}%`
+                              : r.do_am_max
+                              ? `≤ ${r.do_am_max}%`
+                              : r.do_am_min
+                              ? `≥ ${r.do_am_min}%`
+                              : '—'}
                           </td>
                         )}
 
