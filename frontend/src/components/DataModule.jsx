@@ -15,14 +15,47 @@ import {
   FileSpreadsheet,
   X,
   Check,
+  ArrowUpDown,
 } from 'lucide-react';
-import { fetchDataRows } from '../services/googleSheets';
+import { fetchDataRows, fetchUsers } from '../services/googleSheets';
 import MonthlyChartModule from './MonthlyChartModule';
 
-export default function DataModule({ onBack }) {
+export default function DataModule({ onBack, usersList = [] }) {
   const [activeTab, setActiveTab] = useState('list'); // 'list' | 'stats' | 'chart'
   const [dataRows, setDataRows] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Staff users state for mapping id -> ho_ten
+  const [staffUsers, setStaffUsers] = useState(usersList);
+  useEffect(() => {
+    if (usersList && usersList.length > 0) {
+      setStaffUsers(usersList);
+    } else {
+      fetchUsers()
+        .then((u) => setStaffUsers(u))
+        .catch(console.error);
+    }
+  }, [usersList]);
+
+  // Map employee ID -> Full Name
+  const userMap = useMemo(() => {
+    const map = {};
+    (staffUsers || []).forEach((u) => {
+      if (u.id) {
+        map[u.id.trim().toUpperCase()] = u.name || u.id;
+      }
+    });
+    return map;
+  }, [staffUsers]);
+
+  const getStaffDisplayName = (idNv) => {
+    if (!idNv) return '—';
+    const cleanId = idNv.trim().toUpperCase();
+    return userMap[cleanId] || idNv;
+  };
+
+  // Sort direction on measurement date: 'desc' (Mới nhất) | 'asc' (Cũ nhất)
+  const [sortDirection, setSortDirection] = useState('desc');
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -141,20 +174,37 @@ export default function DataModule({ onBack }) {
     document.addEventListener('mouseup', onMouseUp);
   };
 
-  // Parse time helper: sort from newest to oldest (lớn tới nhỏ)
-  const getRecordTimestamp = (r) => {
-    if (r.udt) {
-      const t = new Date(r.udt).getTime();
-      if (!isNaN(t) && t > 0) return t;
-    }
+  // Parse measurement timestamp strictly from ngay_h (or ngay + khung_h)
+  const parseMeasurementTimestamp = (r) => {
     if (r.ngay_h) {
-      const parts = r.ngay_h.trim().split(' ');
-      const dateParts = parts[0].split('/');
-      if (dateParts.length === 3) {
-        const d = dateParts[0].padStart(2, '0');
-        const m = dateParts[1].padStart(2, '0');
-        const y = dateParts[2];
-        const timePart = parts[1] || '00:00:00';
+      const trimmed = r.ngay_h.trim();
+      const parts = trimmed.split(' ');
+      const dParts = parts[0].split('/');
+      if (dParts.length === 3) {
+        const d = dParts[0].padStart(2, '0');
+        const m = dParts[1].padStart(2, '0');
+        const y = dParts[2];
+        let timePart = parts[1];
+        if (!timePart || timePart.indexOf(':') === -1) {
+          timePart = r.khung_h === 'Chiều' ? '14:00:00' : '08:00:00';
+        } else {
+          const tSegments = timePart.split(':');
+          const hh = (tSegments[0] || '00').padStart(2, '0');
+          const mm = (tSegments[1] || '00').padStart(2, '0');
+          const ss = (tSegments[2] || '00').padStart(2, '0');
+          timePart = `${hh}:${mm}:${ss}`;
+        }
+        const t = new Date(`${y}-${m}-${d}T${timePart}`).getTime();
+        if (!isNaN(t) && t > 0) return t;
+      }
+    }
+    if (r.ngay) {
+      const dParts = r.ngay.trim().split('/');
+      if (dParts.length === 3) {
+        const d = dParts[0].padStart(2, '0');
+        const m = dParts[1].padStart(2, '0');
+        const y = dParts[2];
+        const timePart = r.khung_h === 'Chiều' ? '14:00:00' : '08:00:00';
         const t = new Date(`${y}-${m}-${d}T${timePart}`).getTime();
         if (!isNaN(t) && t > 0) return t;
       }
@@ -166,8 +216,6 @@ export default function DataModule({ onBack }) {
     setIsLoading(true);
     try {
       const rows = await fetchDataRows();
-      // Auto sort theo thời gian đo từ lớn tới nhỏ (Mới nhất lên đầu)
-      rows.sort((a, b) => getRecordTimestamp(b) - getRecordTimestamp(a));
       setDataRows(rows);
     } catch (err) {
       console.error(err);
@@ -259,7 +307,8 @@ export default function DataModule({ onBack }) {
         const matchesTen = cleanStr(r.ten).includes(search);
         const matchesId = cleanStr(r.id_tu).includes(search);
         const matchesViTri = cleanStr(r.vi_tri).includes(search);
-        const matchesNv = cleanStr(r.id_nv).includes(search);
+        const staffName = cleanStr(getStaffDisplayName(r.id_nv));
+        const matchesNv = cleanStr(r.id_nv).includes(search) || staffName.includes(search);
         if (!matchesTen && !matchesId && !matchesViTri && !matchesNv) {
           return false;
         }
@@ -305,15 +354,37 @@ export default function DataModule({ onBack }) {
 
       return true;
     });
-  }, [dataRows, searchTerm, filterTenTu, filterThang, filterViTri, filterKhungH, filterKetQua]);
+  }, [dataRows, searchTerm, filterTenTu, filterThang, filterViTri, filterKhungH, filterKetQua, staffUsers]);
+
+  // Sorted and Filtered Rows according to parseMeasurementTimestamp & sortDirection
+  const sortedRows = useMemo(() => {
+    return [...filteredRows].sort((a, b) => {
+      const tsA = parseMeasurementTimestamp(a);
+      const tsB = parseMeasurementTimestamp(b);
+      const diff = sortDirection === 'desc' ? tsB - tsA : tsA - tsB;
+      if (diff !== 0) return diff;
+      if (a.khung_h !== b.khung_h) {
+        if (sortDirection === 'desc') {
+          if (b.khung_h === 'Chiều') return 1;
+          if (a.khung_h === 'Chiều') return -1;
+        } else {
+          if (a.khung_h === 'Sáng') return -1;
+          if (b.khung_h === 'Sáng') return 1;
+        }
+      }
+      return sortDirection === 'desc'
+        ? (b.rowIndex || 0) - (a.rowIndex || 0)
+        : (a.rowIndex || 0) - (b.rowIndex || 0);
+    });
+  }, [filteredRows, sortDirection]);
 
   // Checkbox toggle with guaranteed unique key
   const toggleSelectAll = () => {
-    if (selectedIds.size === filteredRows.length) {
+    if (selectedIds.size === sortedRows.length) {
       setSelectedIds(new Set());
     } else {
       setSelectedIds(
-        new Set(filteredRows.map((r) => r.uniqueId || `row_${r.rowIndex}_${r.id}`))
+        new Set(sortedRows.map((r) => r.uniqueId || `row_${r.rowIndex}_${r.id}`))
       );
     }
   };
@@ -327,7 +398,7 @@ export default function DataModule({ onBack }) {
 
   // Export to CSV
   const exportToCSV = () => {
-    if (!filteredRows.length) {
+    if (!sortedRows.length) {
       alert('Không có dữ liệu để xuất.');
       return;
     }
@@ -348,10 +419,11 @@ export default function DataModule({ onBack }) {
       'Độ Ẩm Đo (%)',
       'Kết Quả',
       'Mã NV',
+      'Tên Nhân Viên',
       'Ghi Chú',
     ];
 
-    const rows = filteredRows.map((r) => [
+    const rows = sortedRows.map((r) => [
       `"${r.id}"`,
       `"${r.ngay}"`,
       `"${r.ngay_h}"`,
@@ -368,6 +440,7 @@ export default function DataModule({ onBack }) {
       `"${r.do_am_do_dc}"`,
       `"${r.ket_qua}"`,
       `"${r.id_nv}"`,
+      `"${getStaffDisplayName(r.id_nv)}"`,
       `"${(r.ghi_chu || '').replace(/"/g, '""')}"`,
     ]);
 
@@ -725,8 +798,8 @@ export default function DataModule({ onBack }) {
                         <input
                           type="checkbox"
                           checked={
-                            selectedIds.size === filteredRows.length &&
-                            filteredRows.length > 0
+                            selectedIds.size === sortedRows.length &&
+                            sortedRows.length > 0
                           }
                           onChange={toggleSelectAll}
                           className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
@@ -758,15 +831,31 @@ export default function DataModule({ onBack }) {
                     {/* Ngày giờ đo */}
                     {visibleColumns.ngay_h && (
                       <th
-                        className="px-3 py-2 border-b border-r border-slate-200 relative whitespace-nowrap"
+                        className="px-3 py-2 border-b border-r border-slate-200 relative whitespace-nowrap cursor-pointer hover:bg-slate-200/70 transition-colors select-none group"
                         style={{
                           width: `${columnWidths.ngay_h}px`,
                           minWidth: `${columnWidths.ngay_h}px`,
                         }}
+                        onClick={() =>
+                          setSortDirection((prev) => (prev === 'desc' ? 'asc' : 'desc'))
+                        }
+                        title="Bấm để đổi thứ tự: Mới nhất ⟷ Cũ nhất"
                       >
-                        <span className="truncate">Thời gian đo</span>
+                        <div className="flex items-center gap-1.5 truncate">
+                          <span>Thời gian đo</span>
+                          <span
+                            className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
+                              sortDirection === 'desc'
+                                ? 'bg-blue-100 text-blue-700'
+                                : 'bg-amber-100 text-amber-700'
+                            }`}
+                          >
+                            {sortDirection === 'desc' ? '▼ Mới nhất' : '▲ Cũ nhất'}
+                          </span>
+                        </div>
                         <div
                           onMouseDown={(e) => startResize('ngay_h', e)}
+                          onClick={(e) => e.stopPropagation()}
                           className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-blue-400 active:bg-blue-600 transition-colors z-20 flex justify-end items-center pr-0.5 group"
                         >
                           <div className="w-[1px] h-3 bg-slate-300 group-hover:bg-blue-600" />
@@ -948,7 +1037,7 @@ export default function DataModule({ onBack }) {
                 </thead>
 
                 <tbody className="divide-y divide-slate-100 bg-white">
-                  {filteredRows.map((r, i) => {
+                  {sortedRows.map((r, i) => {
                     const rowKey = r.uniqueId || `row_${r.rowIndex}_${r.id}`;
                     const isSelected = selectedIds.has(rowKey);
 
@@ -1066,8 +1155,17 @@ export default function DataModule({ onBack }) {
 
                         {/* Nhân viên */}
                         {visibleColumns.id_nv && (
-                          <td className="px-3 py-2.5 border-b border-r border-slate-100 font-medium text-slate-700 whitespace-nowrap overflow-hidden truncate">
-                            {r.id_nv}
+                          <td className="px-3 py-2.5 border-b border-r border-slate-100 font-medium text-slate-700 whitespace-nowrap overflow-hidden">
+                            <div className="flex flex-col min-w-0" title={`Mã NV: ${r.id_nv}`}>
+                              <span className="font-semibold text-slate-800 truncate">
+                                {getStaffDisplayName(r.id_nv)}
+                              </span>
+                              {userMap[r.id_nv?.trim()?.toUpperCase()] && (
+                                <span className="text-[10px] text-slate-400 font-mono truncate">
+                                  Mã: {r.id_nv}
+                                </span>
+                              )}
+                            </div>
                           </td>
                         )}
 
@@ -1190,6 +1288,7 @@ export default function DataModule({ onBack }) {
             tenTuList={tenTuList}
             thangList={thangList}
             onRefresh={loadData}
+            getStaffDisplayName={getStaffDisplayName}
           />
         )}
       </div>

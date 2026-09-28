@@ -24,6 +24,7 @@ export default function MonthlyChartModule({
   tenTuList = [],
   thangList = [],
   onRefresh,
+  getStaffDisplayName,
 }) {
   const [hoveredPoint, setHoveredPoint] = useState(null);
 
@@ -58,20 +59,37 @@ export default function MonthlyChartModule({
     return '';
   };
 
-  // Helper: Parse timestamp for chronological sorting
+  // Helper: Parse measurement timestamp strictly from ngay_h (or ngay + khung_h)
   const getRecordTimestamp = (r) => {
-    if (r.udt) {
-      const t = new Date(r.udt).getTime();
-      if (!isNaN(t) && t > 0) return t;
-    }
     if (r.ngay_h) {
-      const parts = r.ngay_h.trim().split(' ');
-      const dateParts = parts[0].split('/');
-      if (dateParts.length === 3) {
-        const d = dateParts[0].padStart(2, '0');
-        const m = dateParts[1].padStart(2, '0');
-        const y = dateParts[2];
-        const timePart = parts[1] || '00:00:00';
+      const trimmed = r.ngay_h.trim();
+      const parts = trimmed.split(' ');
+      const dParts = parts[0].split('/');
+      if (dParts.length === 3) {
+        const d = dParts[0].padStart(2, '0');
+        const m = dParts[1].padStart(2, '0');
+        const y = dParts[2];
+        let timePart = parts[1];
+        if (!timePart || timePart.indexOf(':') === -1) {
+          timePart = r.khung_h === 'Chiều' ? '14:00:00' : '08:00:00';
+        } else {
+          const tSegments = timePart.split(':');
+          const hh = (tSegments[0] || '00').padStart(2, '0');
+          const mm = (tSegments[1] || '00').padStart(2, '0');
+          const ss = (tSegments[2] || '00').padStart(2, '0');
+          timePart = `${hh}:${mm}:${ss}`;
+        }
+        const t = new Date(`${y}-${m}-${d}T${timePart}`).getTime();
+        if (!isNaN(t) && t > 0) return t;
+      }
+    }
+    if (r.ngay) {
+      const dParts = r.ngay.trim().split('/');
+      if (dParts.length === 3) {
+        const d = dParts[0].padStart(2, '0');
+        const m = dParts[1].padStart(2, '0');
+        const y = dParts[2];
+        const timePart = r.khung_h === 'Chiều' ? '14:00:00' : '08:00:00';
         const t = new Date(`${y}-${m}-${d}T${timePart}`).getTime();
         if (!isNaN(t) && t > 0) return t;
       }
@@ -838,10 +856,12 @@ export default function MonthlyChartModule({
                         : '—'}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Nhân viên:</span>
-                    <span className="font-medium text-slate-700">
-                      {hoveredPoint.row.id_nv || '—'}
+                  <div className="flex justify-between items-baseline gap-2">
+                    <span className="text-slate-400 shrink-0">Nhân viên:</span>
+                    <span className="font-semibold text-slate-800 text-right truncate">
+                      {getStaffDisplayName
+                        ? getStaffDisplayName(hoveredPoint.row.id_nv)
+                        : hoveredPoint.row.id_nv || '—'}
                     </span>
                   </div>
                   {hoveredPoint.row.ghi_chu && (

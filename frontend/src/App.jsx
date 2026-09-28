@@ -161,6 +161,7 @@ export default function App() {
 
       {activeRoute === 'data' && (
         <DataModule
+          usersList={usersList}
           onBack={() => navigateTo('trang_chu')}
         />
       )}
