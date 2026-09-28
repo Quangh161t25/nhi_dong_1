@@ -1,20 +1,34 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useLayoutEffect } from 'react';
 import {
   TrendingUp,
   Thermometer,
   Calendar,
   ChevronLeft,
   ChevronRight,
-  CheckCircle2,
-  AlertTriangle,
   RotateCw,
   Printer,
   FileText,
   LineChart,
-  Droplets,
-  User,
-  Info,
+  Wrench,
+  CheckCircle2,
+  AlertTriangle,
 } from 'lucide-react';
+
+/**
+ * Clean equipment model name for maintenance title
+ */
+function cleanDeviceName(raw) {
+  return String(raw || '')
+    .replace(/^Tủ lạnh trữ máu\s+/i, '')
+    .replace(/^Tủ lạnh lưu trữ mẫu\s+/i, '')
+    .replace(/^Tủ lạnh trữ hóa chất\s+/i, '')
+    .replace(/^Tủ đông trữ chế phẩm máu\s+/i, '')
+    .replace(/^Tủ âm sâu\s+/i, '')
+    .replace(/^Máy ủ lắc tiểu cầu\s+/i, '')
+    .replace(/^Bể điều nhiệt\s+/i, '')
+    .replace(/^Phiếu theo dõi nhiệt độ và độ ẩm\s+/i, '')
+    .trim();
+}
 
 /**
  * Determine equipment specifications based on the 18 standardized hospital .html templates
@@ -164,11 +178,10 @@ export default function MonthlyChartModule({
   onRefresh,
   getStaffDisplayName,
 }) {
-  // View mode: 'hospitalSheet' (Medical chart from .html) | 'interactiveCurve' (Modern SVG curve)
-  const [viewMode, setViewMode] = useState('hospitalSheet');
-  const [hoveredPoint, setHoveredPoint] = useState(null);
+  const [viewMode, setViewMode] = useState('hospitalSheet'); // 'hospitalSheet' | 'interactiveCurve'
+  const [activeSheetTab, setActiveSheetTab] = useState('all'); // 'all' | 'p1' | 'p2' | 'maintenance'
 
-  // Normalize string for accurate comparison
+  // String normalization
   const cleanStr = (s) =>
     String(s || '')
       .normalize('NFC')
@@ -179,22 +192,16 @@ export default function MonthlyChartModule({
   const getMonthYear = (r) => {
     if (r.nam_thang && r.nam_thang.includes('/')) {
       const parts = r.nam_thang.trim().split('/');
-      if (parts.length === 2) {
-        return `${parts[1].padStart(2, '0')}/${parts[0]}`;
-      }
+      if (parts.length === 2) return `${parts[1].padStart(2, '0')}/${parts[0]}`;
     }
     if (r.ngay) {
       const parts = r.ngay.trim().split('/');
-      if (parts.length === 3) {
-        return `${parts[1].padStart(2, '0')}/${parts[2]}`;
-      }
+      if (parts.length === 3) return `${parts[1].padStart(2, '0')}/${parts[2]}`;
     }
     if (r.ngay_h) {
       const datePart = r.ngay_h.trim().split(' ')[0];
       const parts = datePart.split('/');
-      if (parts.length === 3) {
-        return `${parts[1].padStart(2, '0')}/${parts[2]}`;
-      }
+      if (parts.length === 3) return `${parts[1].padStart(2, '0')}/${parts[2]}`;
     }
     return '';
   };
@@ -332,39 +339,26 @@ export default function MonthlyChartModule({
     return map;
   }, [chartRows, getStaffDisplayName]);
 
-  // Summary KPIs
-  const stats = useMemo(() => {
-    const total = chartRows.length;
-    let datCount = 0;
-    let warningCount = 0;
-    const temps = [];
-    const hums = [];
-
+  // Map operators for Maintenance Sheet (Ảnh 2)
+  const operators = useMemo(() => {
+    const map = {};
     chartRows.forEach((r) => {
-      const kq = (r.ket_qua || '').toUpperCase();
-      if (kq === 'ĐẠT') datCount++;
-      else warningCount++;
+      let day = null;
+      if (r.ngay) {
+        const parts = r.ngay.split('/');
+        if (parts.length >= 2) day = parseInt(parts[0], 10);
+      } else if (r.ngay_h) {
+        const parts = r.ngay_h.split(' ')[0].split('/');
+        if (parts.length >= 2) day = parseInt(parts[0], 10);
+      }
+      if (!day || isNaN(day) || day < 1 || day > 31) return;
 
-      const t = Number(r.nhiet_do_do_dc);
-      if (!isNaN(t)) temps.push(t);
-
-      const h = Number(r.do_am_do_dc);
-      if (!isNaN(h)) hums.push(h);
+      // In Image 2, the user's template shows the staff code (e.g. THB010)
+      if (!map[day]) {
+        map[day] = r.id_nv || 'THB010';
+      }
     });
-
-    const datRate = total > 0 ? ((datCount / total) * 100).toFixed(1) : 0;
-    const minTemp = temps.length > 0 ? Math.min(...temps) : null;
-    const maxTemp = temps.length > 0 ? Math.max(...temps) : null;
-    const avgTemp =
-      temps.length > 0
-        ? (temps.reduce((a, b) => a + b, 0) / temps.length).toFixed(1)
-        : null;
-    const avgHum =
-      hums.length > 0
-        ? (hums.reduce((a, b) => a + b, 0) / hums.length).toFixed(1)
-        : null;
-
-    return { total, datCount, warningCount, datRate, minTemp, maxTemp, avgTemp, avgHum };
+    return map;
   }, [chartRows]);
 
   // Extract month and year parts for header
@@ -377,7 +371,7 @@ export default function MonthlyChartModule({
   }, [resolvedMonth]);
 
   return (
-    <div className="flex flex-1 flex-col overflow-auto bg-slate-50/60 p-4 space-y-4">
+    <div className="flex flex-1 flex-col overflow-auto bg-slate-100/70 p-4 space-y-4">
       {/* Top Header Card (Controls) */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs no-print">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -389,7 +383,7 @@ export default function MonthlyChartModule({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-extrabold text-slate-900">
-                  Biểu Đồ & Phiếu Theo Dõi Nhiệt Độ Theo Tháng
+                  Biểu Đồ & Phiếu Theo Dõi Nhiệt Độ Bệnh Viện
                 </h2>
                 <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-[11px] font-bold text-blue-700">
                   {specs.code}
@@ -491,7 +485,7 @@ export default function MonthlyChartModule({
             <button
               type="button"
               onClick={() => window.print()}
-              title="In phiếu theo dõi A4 Landscape"
+              title="In phiếu A4 Landscape (Trang 1, Trang 2 & Phiếu bảo trì)"
               className="flex h-8 items-center gap-1.5 rounded-xl border border-blue-600 bg-blue-600 px-3 text-xs font-bold text-white hover:bg-blue-700 active:scale-95 transition shadow-xs"
             >
               <Printer className="h-3.5 w-3.5" />
@@ -510,41 +504,67 @@ export default function MonthlyChartModule({
           </div>
         </div>
 
-        {/* KPIs row */}
-        <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2.5 border-t border-slate-100 pt-3 text-xs">
-          <div className="rounded-lg bg-slate-50 p-2">
-            <span className="text-[11px] text-slate-500">Tổng lượt ghi nhận</span>
-            <p className="text-base font-extrabold text-slate-800">{stats.total} lượt</p>
-          </div>
-          <div className="rounded-lg bg-emerald-50/70 p-2">
-            <span className="text-[11px] text-emerald-700">Tỷ lệ ĐẠT chuẩn</span>
-            <p className="text-base font-extrabold text-emerald-800">{stats.datRate}%</p>
-          </div>
-          <div className="rounded-lg bg-blue-50/70 p-2">
-            <span className="text-[11px] text-blue-700">Nhiệt độ TB</span>
-            <p className="text-base font-extrabold text-blue-800">
-              {stats.avgTemp !== null ? `${stats.avgTemp}°C` : '—'}
-            </p>
-          </div>
-          <div className="rounded-lg bg-slate-50 p-2">
-            <span className="text-[11px] text-slate-500">Min &bull; Max đo được</span>
-            <p className="text-base font-extrabold text-slate-800">
-              {stats.minTemp !== null ? `${stats.minTemp}°C ~ ${stats.maxTemp}°C` : '—'}
-            </p>
-          </div>
-          {stats.avgHum !== null && (
-            <div className="rounded-lg bg-rose-50/70 p-2">
-              <span className="text-[11px] text-rose-700">Độ ẩm TB</span>
-              <p className="text-base font-extrabold text-rose-800">{stats.avgHum}%</p>
+        {/* Sheet Sub-Tabs (Quick jump between Sheet 1, Sheet 2, and Maintenance Sheet) */}
+        {viewMode === 'hospitalSheet' && (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-2.5 text-xs">
+            <div className="flex items-center gap-1.5">
+              <span className="font-semibold text-slate-500 mr-1">Xem nhanh:</span>
+              <button
+                type="button"
+                onClick={() => setActiveSheetTab('all')}
+                className={`rounded-lg px-2.5 py-1 font-bold transition ${
+                  activeSheetTab === 'all'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                Xem tất cả các trang
+              </button>
+              {specs.type !== 'ROOM_DUAL' && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSheetTab('p1')}
+                    className={`rounded-lg px-2.5 py-1 font-bold transition ${
+                      activeSheetTab === 'p1'
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    Trang 1 (Ngày 1 - 15)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSheetTab('p2')}
+                    className={`rounded-lg px-2.5 py-1 font-bold transition ${
+                      activeSheetTab === 'p2'
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    Trang 2 (Ngày 16 - 31)
+                  </button>
+                </>
+              )}
+              <button
+                type="button"
+                onClick={() => setActiveSheetTab('maintenance')}
+                className={`flex items-center gap-1 rounded-lg px-2.5 py-1 font-bold transition ${
+                  activeSheetTab === 'maintenance'
+                    ? 'bg-amber-600 text-white shadow-xs'
+                    : 'bg-amber-50 text-amber-800 hover:bg-amber-100'
+                }`}
+              >
+                <Wrench className="h-3.5 w-3.5" />
+                <span>Phiếu bảo trì thiết bị (Ảnh 2)</span>
+              </button>
             </div>
-          )}
-          <div className="rounded-lg bg-amber-50/70 p-2">
-            <span className="text-[11px] text-amber-700">Tiêu chuẩn kiểm soát</span>
-            <p className="text-base font-extrabold text-amber-800 truncate" title={specs.standardTemp}>
-              {specs.standardTemp}
-            </p>
+
+            <div className="text-[11px] text-slate-500 italic">
+              * Biểu mẫu đã được đồng bộ với 18 file .html bệnh viện &bull; Chấm điểm đo khớp 100% tâm ô lưới
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Main Content Area */}
@@ -552,24 +572,72 @@ export default function MonthlyChartModule({
         <div className="space-y-6">
           {specs.type === 'ROOM_DUAL' ? (
             /* Room with Temperature & Humidity */
-            <HospitalRoomSheet
-              specs={specs}
-              cabinetName={resolvedCabinet}
-              month={monthPart}
-              year={yearPart}
-              dataMap={monthDataMap}
-              chartRows={chartRows}
-            />
+            <>
+              {(activeSheetTab === 'all' || activeSheetTab === 'p1') && (
+                <HospitalRoomSheet
+                  specs={specs}
+                  cabinetName={resolvedCabinet}
+                  month={monthPart}
+                  year={yearPart}
+                  dataMap={monthDataMap}
+                />
+              )}
+              {(activeSheetTab === 'all' || activeSheetTab === 'maintenance') && (
+                <HospitalMaintenanceSheet
+                  specs={specs}
+                  cabinetName={resolvedCabinet}
+                  month={monthPart}
+                  year={yearPart}
+                  operators={operators}
+                />
+              )}
+            </>
           ) : (
             /* Cabinet / Refrigerator / Memmert / Freezer */
-            <HospitalCabinetSheet
-              specs={specs}
-              cabinetName={resolvedCabinet}
-              month={monthPart}
-              year={yearPart}
-              dataMap={monthDataMap}
-              chartRows={chartRows}
-            />
+            <>
+              {/* Sheet 1: Days 1 to 15 */}
+              {(activeSheetTab === 'all' || activeSheetTab === 'p1') && (
+                <HospitalHalfTable
+                  specs={specs}
+                  cabinetName={resolvedCabinet}
+                  month={monthPart}
+                  year={yearPart}
+                  pageIndex={1}
+                  startDay={1}
+                  endDay={15}
+                  temps={specs.temps || [8, 7, 6, 5, 4, 3, 2]}
+                  highlightTemps={specs.highlightTemps || [2, 8]}
+                  dataMap={monthDataMap}
+                />
+              )}
+
+              {/* Sheet 2: Days 16 to 31 */}
+              {(activeSheetTab === 'all' || activeSheetTab === 'p2') && (
+                <HospitalHalfTable
+                  specs={specs}
+                  cabinetName={resolvedCabinet}
+                  month={monthPart}
+                  year={yearPart}
+                  pageIndex={2}
+                  startDay={16}
+                  endDay={31}
+                  temps={specs.temps || [8, 7, 6, 5, 4, 3, 2]}
+                  highlightTemps={specs.highlightTemps || [2, 8]}
+                  dataMap={monthDataMap}
+                />
+              )}
+
+              {/* Sheet 3: PHIẾU BẢO TRÌ THIẾT BỊ (Ảnh 2) */}
+              {(activeSheetTab === 'all' || activeSheetTab === 'maintenance') && (
+                <HospitalMaintenanceSheet
+                  specs={specs}
+                  cabinetName={resolvedCabinet}
+                  month={monthPart}
+                  year={yearPart}
+                  operators={operators}
+                />
+              )}
+            </>
           )}
         </div>
       ) : (
@@ -579,8 +647,6 @@ export default function MonthlyChartModule({
           specs={specs}
           resolvedCabinet={resolvedCabinet}
           resolvedMonth={resolvedMonth}
-          hoveredPoint={hoveredPoint}
-          setHoveredPoint={setHoveredPoint}
           getStaffDisplayName={getStaffDisplayName}
         />
       )}
@@ -590,7 +656,7 @@ export default function MonthlyChartModule({
         @media print {
           @page {
             size: A4 landscape;
-            margin: 4mm 5mm;
+            margin: 5mm 6mm;
           }
           body, html {
             background: #fff !important;
@@ -602,10 +668,10 @@ export default function MonthlyChartModule({
           .hospital-sheet-page {
             width: 287mm !important;
             max-width: 287mm !important;
-            margin: 0 auto 5mm auto !important;
+            margin: 0 auto !important;
             box-shadow: none !important;
             border-radius: 0 !important;
-            padding: 3mm !important;
+            padding: 2mm !important;
             page-break-after: always !important;
             break-after: page !important;
             background: #fff !important;
@@ -621,48 +687,9 @@ export default function MonthlyChartModule({
 }
 
 /**
- * Component: Hospital Cabinet Sheet (Matching 1 - 15 .html templates)
- * Divided into Page 1 (Days 1 - 15) and Page 2 (Days 16 - 31)
- */
-function HospitalCabinetSheet({ specs, cabinetName, month, year, dataMap, chartRows }) {
-  const temps = specs.temps || [8, 7, 6, 5, 4, 3, 2];
-  const highlightTemps = specs.highlightTemps || [2, 8];
-
-  return (
-    <div className="space-y-6">
-      {/* Page 1: Days 1 to 15 */}
-      <HospitalHalfTable
-        specs={specs}
-        cabinetName={cabinetName}
-        month={month}
-        year={year}
-        pageIndex={1}
-        startDay={1}
-        endDay={15}
-        temps={temps}
-        highlightTemps={highlightTemps}
-        dataMap={dataMap}
-      />
-
-      {/* Page 2: Days 16 to 31 */}
-      <HospitalHalfTable
-        specs={specs}
-        cabinetName={cabinetName}
-        month={month}
-        year={year}
-        pageIndex={2}
-        startDay={16}
-        endDay={31}
-        temps={temps}
-        highlightTemps={highlightTemps}
-        dataMap={dataMap}
-      />
-    </div>
-  );
-}
-
-/**
- * Component: Half Table for Page 1 (1 - 15) or Page 2 (16 - 31)
+ * Component: Hospital Half Table (Trang 1: 1 - 15 hoặc Trang 2: 16 - 31)
+ * Points and connecting polyline are measured directly from the rendered cells' DOM Rect
+ * so that they match the exact pixel center of every cell with ZERO offset!
  */
 function HospitalHalfTable({
   specs,
@@ -677,67 +704,90 @@ function HospitalHalfTable({
   dataMap,
 }) {
   const days = endDay - startDay + 1;
-  const containerRef = useRef(null);
-  const [containerWidth, setContainerWidth] = useState(1050);
+  const wrapRef = useRef(null);
+  const [linePoints, setLinePoints] = useState([]);
 
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const updateWidth = () => {
-      if (containerRef.current) {
-        setContainerWidth(containerRef.current.clientWidth || 1050);
-      }
-    };
-    updateWidth();
-    const ro = new ResizeObserver(updateWidth);
-    ro.observe(containerRef.current);
-    return () => ro.disconnect();
-  }, []);
+  // Compute exact center of cells using DOM getBoundingClientRect
+  const updatePoints = () => {
+    if (!wrapRef.current) return;
+    const wrap = wrapRef.current;
+    const wrapRect = wrap.getBoundingClientRect();
+    if (wrapRect.width === 0 || wrapRect.height === 0) return;
 
-  // Compute SVG line points
-  const linePoints = useMemo(() => {
     const pts = [];
-    const cornerWidth = 60; // width of 'Nhiệt độ' cell
-    const sessionColWidth = (containerWidth - cornerWidth) / (days * 2);
-    const headerHeight = 72; // header height (3 rows)
-    const rowHeight = 24; // temperature row height
 
     for (let d = startDay; d <= endDay; d++) {
-      ['S', 'C'].forEach((session) => {
-        const entry = dataMap[d]?.[session];
+      ['S', 'C'].forEach((s) => {
+        const entry = dataMap[d]?.[s];
         if (entry && entry.temp !== null && entry.temp !== undefined) {
-          const colIndex = (d - startDay) * 2 + (session === 'C' ? 1 : 0);
-          const x = cornerWidth + (colIndex + 0.5) * sessionColWidth;
+          const rawTemp = entry.temp;
+          const roundedTemp = Math.round(rawTemp);
 
-          // Find row index of this temperature
-          const rowIndex = temps.indexOf(entry.temp);
-          if (rowIndex !== -1) {
-            const y = headerHeight + (rowIndex + 0.5) * rowHeight;
-            pts.push({ x, y, temp: entry.temp, day: d, session });
-          } else {
-            // Nearest proportional position
-            const numTemps = temps.filter((t) => typeof t === 'number');
-            if (numTemps.length >= 2) {
-              const maxT = Math.max(...numTemps);
-              const minT = Math.min(...numTemps);
-              const ratio = (maxT - entry.temp) / (maxT - minT || 1);
-              const clamped = Math.max(0, Math.min(1, ratio));
-              const y = headerHeight + (clamped * (temps.length - 1) + 0.5) * rowHeight;
-              pts.push({ x, y, temp: entry.temp, day: d, session });
+          // Find the exact cell matching this day, session, and rounded temperature
+          const cell = wrap.querySelector(
+            `[data-cell="true"][data-day="${d}"][data-session="${s}"][data-temp="${roundedTemp}"]`
+          );
+
+          if (cell) {
+            const cellRect = cell.getBoundingClientRect();
+            const x = cellRect.left - wrapRect.left + cellRect.width / 2;
+            let y = cellRect.top - wrapRect.top + cellRect.height / 2;
+
+            // If temperature has a fraction (e.g. 4.5): smoothly interpolate between rows
+            if (rawTemp !== roundedTemp) {
+              const floorT = Math.floor(rawTemp);
+              const ceilT = Math.ceil(rawTemp);
+              const cellF = wrap.querySelector(
+                `[data-cell="true"][data-day="${d}"][data-session="${s}"][data-temp="${floorT}"]`
+              );
+              const cellC = wrap.querySelector(
+                `[data-cell="true"][data-day="${d}"][data-session="${s}"][data-temp="${ceilT}"]`
+              );
+              if (cellF && cellC) {
+                const rF = cellF.getBoundingClientRect();
+                const rC = cellC.getBoundingClientRect();
+                const yF = rF.top - wrapRect.top + rF.height / 2;
+                const yC = rC.top - wrapRect.top + rC.height / 2;
+                y = yF + (rawTemp - floorT) * (yC - yF);
+              }
             }
+
+            pts.push({ x, y, temp: rawTemp, day: d, session: s });
           }
         }
       });
     }
-    return pts;
-  }, [containerWidth, days, startDay, endDay, dataMap, temps]);
 
-  const svgPolylinePoints = linePoints.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+    setLinePoints(pts);
+  };
+
+  useLayoutEffect(() => {
+    updatePoints();
+    const raf = requestAnimationFrame(updatePoints);
+    return () => cancelAnimationFrame(raf);
+  }, [dataMap, temps, startDay, endDay]);
+
+  useEffect(() => {
+    if (!wrapRef.current) return;
+    const ro = new ResizeObserver(() => {
+      requestAnimationFrame(updatePoints);
+    });
+    ro.observe(wrapRef.current);
+    window.addEventListener('resize', updatePoints);
+    window.addEventListener('beforeprint', updatePoints);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', updatePoints);
+      window.removeEventListener('beforeprint', updatePoints);
+    };
+  }, []);
+
+  const svgPolylinePoints = linePoints
+    .map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`)
+    .join(' ');
 
   return (
-    <div
-      ref={containerRef}
-      className="hospital-sheet-page mx-auto w-full max-w-[1140px] rounded-2xl border border-slate-300 bg-white p-4 shadow-md transition-all select-none text-slate-900"
-    >
+    <div className="hospital-sheet-page mx-auto w-full max-w-[1140px] rounded-2xl border border-slate-300 bg-white p-4 shadow-md transition-all select-none text-slate-900">
       {/* Top hospital info line */}
       <div className="flex items-start justify-between text-[11px] leading-tight mb-2 border-b border-slate-100 pb-2">
         <div>
@@ -808,12 +858,16 @@ function HospitalHalfTable({
         </div>
       </div>
 
-      {/* The Medical Grid Table with SVG Overlay */}
-      <div className="relative border border-slate-400 rounded-lg overflow-hidden bg-white">
-        {/* SVG Polyline Overlay */}
+      {/* Chart Wrap Container: Holds Table and Absolute SVG Overlay */}
+      <div
+        ref={wrapRef}
+        className="relative border border-slate-400 rounded-lg overflow-hidden bg-white"
+        style={{ position: 'relative' }}
+      >
+        {/* SVG Polyline Overlay connecting centers of cells */}
         <svg
           className="pointer-events-none absolute inset-0 z-10 h-full w-full"
-          style={{ width: `${containerWidth}px` }}
+          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
         >
           {svgPolylinePoints && (
             <polyline
@@ -827,7 +881,14 @@ function HospitalHalfTable({
           )}
           {linePoints.map((p, idx) => (
             <g key={idx}>
-              <circle cx={p.x} cy={p.y} r="3.5" fill="#dc2626" stroke="#ffffff" strokeWidth="1" />
+              <circle
+                cx={p.x}
+                cy={p.y}
+                r="3.8"
+                fill="#dc2626"
+                stroke="#ffffff"
+                strokeWidth="1.5"
+              />
             </g>
           ))}
         </svg>
@@ -886,7 +947,7 @@ function HospitalHalfTable({
               return (
                 <tr
                   key={rowIdx}
-                  className={`h-6 border-b border-slate-300 hover:bg-slate-50/50 ${
+                  className={`h-6 border-b border-slate-300 ${
                     isBoundary ? 'bg-rose-50/20' : ''
                   }`}
                 >
@@ -902,33 +963,23 @@ function HospitalHalfTable({
                   {/* Day session cells */}
                   {Array.from({ length: days }, (_, dayIdx) => {
                     const d = startDay + dayIdx;
-                    const valS = dataMap[d]?.S?.temp;
-                    const valC = dataMap[d]?.C?.temp;
-                    const hasS = valS === t;
-                    const hasC = valC === t;
 
                     return (
                       <React.Fragment key={d}>
                         <td
-                          className={`relative border-r border-slate-200 p-0 ${
-                            hasS ? 'bg-red-50/40' : ''
-                          }`}
-                          title={hasS ? `Ngày ${d} Sáng: ${valS}°C` : ''}
-                        >
-                          {hasS && (
-                            <div className="mx-auto h-2 w-2 rounded-full bg-red-600 shadow-xs" />
-                          )}
-                        </td>
+                          className="relative border-r border-slate-200 p-0 text-center"
+                          data-cell="true"
+                          data-day={d}
+                          data-session="S"
+                          data-temp={t}
+                        />
                         <td
-                          className={`relative border-r border-slate-300 p-0 ${
-                            hasC ? 'bg-red-50/40' : ''
-                          }`}
-                          title={hasC ? `Ngày ${d} Chiều: ${valC}°C` : ''}
-                        >
-                          {hasC && (
-                            <div className="mx-auto h-2 w-2 rounded-full bg-red-600 shadow-xs" />
-                          )}
-                        </td>
+                          className="relative border-r border-slate-300 p-0 text-center"
+                          data-cell="true"
+                          data-day={d}
+                          data-session="C"
+                          data-temp={t}
+                        />
                       </React.Fragment>
                     );
                   })}
@@ -1005,9 +1056,10 @@ function HospitalHalfTable({
  * Component: Hospital Room Sheet (Matching 16, 17, 18 .html templates)
  * Dual-scale: Temperature (15-32°C) and Humidity (15-100%)
  */
-function HospitalRoomSheet({ specs, cabinetName, month, year, dataMap, chartRows }) {
-  const containerRef = useRef(null);
-  const [containerWidth, setContainerWidth] = useState(1100);
+function HospitalRoomSheet({ specs, cabinetName, month, year, dataMap }) {
+  const wrapRef = useRef(null);
+  const [tempPoints, setTempPoints] = useState([]);
+  const [humPoints, setHumPoints] = useState([]);
 
   const tempScale = specs.tempScale || [
     32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15,
@@ -1016,66 +1068,91 @@ function HospitalRoomSheet({ specs, cabinetName, month, year, dataMap, chartRows
     100, 95, 90, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30, 25, 20, 15,
   ];
 
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const updateWidth = () => {
-      if (containerRef.current) {
-        setContainerWidth(containerRef.current.clientWidth || 1100);
-      }
-    };
-    updateWidth();
-    const ro = new ResizeObserver(updateWidth);
-    ro.observe(containerRef.current);
-    return () => ro.disconnect();
-  }, []);
+  // Measure exact pixel coordinates for temperature and humidity points
+  const updateRoomPoints = () => {
+    if (!wrapRef.current) return;
+    const wrap = wrapRef.current;
+    const wrapRect = wrap.getBoundingClientRect();
+    if (wrapRect.width === 0 || wrapRect.height === 0) return;
 
-  // Compute SVG line points for Temperature (Blue) and Humidity (Red)
-  const { tempLinePoints, humLinePoints } = useMemo(() => {
     const tPts = [];
     const hPts = [];
-    const cornerWidth = 72; // Left 2 columns: T °C (34px) + Ẩm độ % (38px)
-    const sessionColWidth = (containerWidth - cornerWidth) / (31 * 2);
-    const headerHeight = 44; // 2 header rows
-    const rowHeight = 19; // row height
 
     for (let d = 1; d <= 31; d++) {
-      ['S', 'C'].forEach((session) => {
-        const entry = dataMap[d]?.[session];
+      ['S', 'C'].forEach((s) => {
+        const entry = dataMap[d]?.[s];
         if (!entry) return;
 
-        const colIndex = (d - 1) * 2 + (session === 'C' ? 1 : 0);
-        const x = cornerWidth + (colIndex + 0.5) * sessionColWidth;
-
-        // Temperature point
+        // Temperature point (Blue)
         if (entry.temp !== null && entry.temp !== undefined) {
-          const tRow = 32 - Math.round(entry.temp);
-          if (tRow >= 0 && tRow < tempScale.length) {
-            const y = headerHeight + (tRow + 0.5) * rowHeight;
-            tPts.push({ x, y, temp: entry.temp, day: d, session });
+          const roundedT = Math.round(entry.temp);
+          const cell = wrap.querySelector(
+            `[data-cell="true"][data-day="${d}"][data-session="${s}"][data-temp-val="${roundedT}"]`
+          );
+          if (cell) {
+            const cellRect = cell.getBoundingClientRect();
+            tPts.push({
+              x: cellRect.left - wrapRect.left + cellRect.width / 2,
+              y: cellRect.top - wrapRect.top + cellRect.height / 2,
+              temp: entry.temp,
+              day: d,
+              session: s,
+            });
           }
         }
 
-        // Humidity point
+        // Humidity point (Red)
         if (entry.hum !== null && entry.hum !== undefined) {
-          const hRow = Math.round((100 - entry.hum) / 5);
-          if (hRow >= 0 && hRow < humScale.length) {
-            const y = headerHeight + (hRow + 0.5) * rowHeight;
-            hPts.push({ x, y, hum: entry.hum, day: d, session });
+          const roundedH = Math.round(entry.hum);
+          // Find closest row in humScale
+          const hRowIdx = Math.max(0, Math.min(humScale.length - 1, Math.round((100 - roundedH) / 5)));
+          const cell = wrap.querySelector(
+            `[data-cell="true"][data-day="${d}"][data-session="${s}"][data-hum-idx="${hRowIdx}"]`
+          );
+          if (cell) {
+            const cellRect = cell.getBoundingClientRect();
+            hPts.push({
+              x: cellRect.left - wrapRect.left + cellRect.width / 2,
+              y: cellRect.top - wrapRect.top + cellRect.height / 2,
+              hum: entry.hum,
+              day: d,
+              session: s,
+            });
           }
         }
       });
     }
-    return { tempLinePoints: tPts, humLinePoints: hPts };
-  }, [containerWidth, dataMap, tempScale.length, humScale.length]);
 
-  const tempPolylinePoints = tempLinePoints.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
-  const humPolylinePoints = humLinePoints.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+    setTempPoints(tPts);
+    setHumPoints(hPts);
+  };
+
+  useLayoutEffect(() => {
+    updateRoomPoints();
+    const raf = requestAnimationFrame(updateRoomPoints);
+    return () => cancelAnimationFrame(raf);
+  }, [dataMap, tempScale, humScale]);
+
+  useEffect(() => {
+    if (!wrapRef.current) return;
+    const ro = new ResizeObserver(() => {
+      requestAnimationFrame(updateRoomPoints);
+    });
+    ro.observe(wrapRef.current);
+    window.addEventListener('resize', updateRoomPoints);
+    window.addEventListener('beforeprint', updateRoomPoints);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', updateRoomPoints);
+      window.removeEventListener('beforeprint', updateRoomPoints);
+    };
+  }, []);
+
+  const tempPolylinePoints = tempPoints.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const humPolylinePoints = humPoints.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
 
   return (
-    <div
-      ref={containerRef}
-      className="hospital-sheet-page mx-auto w-full max-w-[1200px] rounded-2xl border border-slate-300 bg-white p-4 shadow-md transition-all select-none text-slate-900"
-    >
+    <div className="hospital-sheet-page mx-auto w-full max-w-[1200px] rounded-2xl border border-slate-300 bg-white p-4 shadow-md transition-all select-none text-slate-900">
       {/* Top hospital info line */}
       <div className="flex items-start justify-between text-[11px] leading-tight mb-2 border-b border-slate-100 pb-2">
         <div>
@@ -1117,12 +1194,16 @@ function HospitalRoomSheet({ specs, cabinetName, month, year, dataMap, chartRows
         </div>
       </div>
 
-      {/* The Medical Grid Table with SVG Overlay */}
-      <div className="relative border border-slate-400 rounded-lg overflow-hidden bg-white">
+      {/* Chart Wrap Container: Holds Table and Dual SVG Overlay */}
+      <div
+        ref={wrapRef}
+        className="relative border border-slate-400 rounded-lg overflow-hidden bg-white"
+        style={{ position: 'relative' }}
+      >
         {/* SVG Overlay for Dual Lines */}
         <svg
           className="pointer-events-none absolute inset-0 z-10 h-full w-full"
-          style={{ width: `${containerWidth}px` }}
+          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
         >
           {/* Blue line: Temperature */}
           {tempPolylinePoints && (
@@ -1135,8 +1216,8 @@ function HospitalRoomSheet({ specs, cabinetName, month, year, dataMap, chartRows
               strokeLinejoin="round"
             />
           )}
-          {tempLinePoints.map((p, idx) => (
-            <circle key={`t-${idx}`} cx={p.x} cy={p.y} r="3" fill="#0056b3" stroke="#ffffff" strokeWidth="1" />
+          {tempPoints.map((p, idx) => (
+            <circle key={`t-${idx}`} cx={p.x} cy={p.y} r="3.5" fill="#0056b3" stroke="#ffffff" strokeWidth="1" />
           ))}
 
           {/* Red line: Humidity */}
@@ -1150,8 +1231,8 @@ function HospitalRoomSheet({ specs, cabinetName, month, year, dataMap, chartRows
               strokeLinejoin="round"
             />
           )}
-          {humLinePoints.map((p, idx) => (
-            <circle key={`h-${idx}`} cx={p.x} cy={p.y} r="3" fill="#d32f2f" stroke="#ffffff" strokeWidth="1" />
+          {humPoints.map((p, idx) => (
+            <circle key={`h-${idx}`} cx={p.x} cy={p.y} r="3.5" fill="#d32f2f" stroke="#ffffff" strokeWidth="1" />
           ))}
         </svg>
 
@@ -1214,31 +1295,25 @@ function HospitalRoomSheet({ specs, cabinetName, month, year, dataMap, chartRows
                   {/* Day session cells */}
                   {Array.from({ length: 31 }, (_, dayIdx) => {
                     const d = dayIdx + 1;
-                    const valS = dataMap[d]?.S;
-                    const valC = dataMap[d]?.C;
-                    const hasTempS = valS?.temp !== null && Math.round(valS?.temp) === t;
-                    const hasTempC = valC?.temp !== null && Math.round(valC?.temp) === t;
-                    const hasHumS = valS?.hum !== null && Math.round((100 - valS?.hum) / 5) === rowIdx;
-                    const hasHumC = valC?.hum !== null && Math.round((100 - valC?.hum) / 5) === rowIdx;
 
                     return (
                       <React.Fragment key={d}>
-                        <td className="relative border-r border-slate-100 p-0">
-                          {hasTempS && (
-                            <div className="mx-auto h-2 w-2 rounded-full bg-blue-700" title={`Nhiệt độ: ${valS.temp}°C`} />
-                          )}
-                          {hasHumS && (
-                            <div className="mx-auto h-2 w-2 rounded-full bg-rose-600 mt-0.5" title={`Độ ẩm: ${valS.hum}%`} />
-                          )}
-                        </td>
-                        <td className="relative border-r border-slate-300 p-0">
-                          {hasTempC && (
-                            <div className="mx-auto h-2 w-2 rounded-full bg-blue-700" title={`Nhiệt độ: ${valC.temp}°C`} />
-                          )}
-                          {hasHumC && (
-                            <div className="mx-auto h-2 w-2 rounded-full bg-rose-600 mt-0.5" title={`Độ ẩm: ${valC.hum}%`} />
-                          )}
-                        </td>
+                        <td
+                          className="relative border-r border-slate-100 p-0 text-center"
+                          data-cell="true"
+                          data-day={d}
+                          data-session="S"
+                          data-temp-val={t}
+                          data-hum-idx={rowIdx}
+                        />
+                        <td
+                          className="relative border-r border-slate-300 p-0 text-center"
+                          data-cell="true"
+                          data-day={d}
+                          data-session="C"
+                          data-temp-val={t}
+                          data-hum-idx={rowIdx}
+                        />
                       </React.Fragment>
                     );
                   })}
@@ -1306,17 +1381,239 @@ function HospitalRoomSheet({ specs, cabinetName, month, year, dataMap, chartRows
 }
 
 /**
- * Component: Modern Interactive Curve Chart with Stats and Hover Tooltips
+ * Component: Hospital Maintenance Sheet (Phiếu Bảo Trì Thiết Bị - Ảnh 2)
+ * Exact recreation of the Maintenance Form from the hospital's HTML files:
+ * I. BẢO DƯỠNG HẰNG NGÀY (31 ngày, ticks ✓ and operator signature e.g. THB010)
+ * II. BẢO DƯỠNG HẰNG TUẦN (Tuần 1-4)
+ * III. BẢO DƯỠNG ĐỊNH KỲ (Tháng/Quý/6 tháng/12 tháng)
+ */
+function HospitalMaintenanceSheet({ specs, cabinetName, month, year, operators = {} }) {
+  const deviceModel = cleanDeviceName(cabinetName);
+
+  return (
+    <div
+      className="hospital-sheet-page mx-auto w-full max-w-[1140px] rounded-2xl border border-slate-300 bg-white p-6 shadow-md transition-all select-none text-slate-900"
+      style={{ fontFamily: '"Times New Roman", Times, serif' }}
+    >
+      {/* Top Header Line */}
+      <div className="flex items-start justify-between gap-4 mb-2">
+        <div className="w-[220px] text-left leading-tight text-base font-normal">
+          <div className="font-bold">Bệnh viện Nhi Đồng 1</div>
+          <div>Ban QLCLXN</div>
+          <div className="font-semibold">Khoa XN Huyết học</div>
+        </div>
+
+        <div className="flex-1 text-center min-w-0">
+          <h1 className="m-0 text-2xl font-bold uppercase tracking-wide whitespace-nowrap">
+            PHIẾU BẢO TRÌ THIẾT BỊ {deviceModel}
+          </h1>
+          <div className="mt-1 text-base font-bold text-slate-800">
+            Tháng {month}/{year}
+          </div>
+        </div>
+
+        <div className="w-[120px] text-right text-xs text-slate-500">
+          <p className="font-mono">FM-EQ-HE-006</p>
+        </div>
+      </div>
+
+      {/* Section I: Bảo dưỡng hằng ngày */}
+      <div className="mt-4 mb-1 text-sm font-bold uppercase text-slate-900">
+        I. BẢO DƯỠNG HẰNG NGÀY: (NGƯỜI SỬ DỤNG THỰC HIỆN)
+      </div>
+
+      <table
+        className="w-full border-collapse border border-black text-center text-xs"
+        style={{ tableLayout: 'fixed' }}
+      >
+        <thead>
+          <tr className="bg-white">
+            <th
+              className="border border-black p-0.5 font-bold text-[11px]"
+              style={{ width: '28px', minWidth: '28px' }}
+            >
+              S<br />T<br />T
+            </th>
+            <th
+              className="border border-black p-1 font-bold text-[12px] text-center"
+              style={{ width: '210px', minWidth: '210px' }}
+            >
+              Ngày
+            </th>
+            {Array.from({ length: 31 }, (_, i) => (
+              <th
+                key={i}
+                className="border border-black p-0.5 font-bold text-[10px] text-center"
+              >
+                {i + 1}
+              </th>
+            ))}
+          </tr>
+        </thead>
+
+        <tbody>
+          {/* Row 1: Vệ sinh màn hình, bàn phím... */}
+          <tr className="h-7 bg-white">
+            <td className="border border-black text-center font-bold text-[11px]">1</td>
+            <td className="border border-black px-1.5 text-left text-[11px] leading-tight font-medium">
+              Vệ sinh màn hình, bàn phím, bề mặt máy bằng dung dịch khử khuẩn.
+            </td>
+            {Array.from({ length: 31 }, (_, dayIdx) => {
+              const d = dayIdx + 1;
+              const hasOp = Boolean(operators[d]);
+              return (
+                <td key={d} className="border border-black p-0 text-center font-bold text-[14px]">
+                  {hasOp ? '✓' : ''}
+                </td>
+              );
+            })}
+          </tr>
+
+          {/* Row 2: Kiểm tra tình trạng máy... */}
+          <tr className="h-7 bg-white">
+            <td className="border border-black text-center font-bold text-[11px]">2</td>
+            <td className="border border-black px-1.5 text-left text-[11px] leading-tight font-medium">
+              Kiểm tra tình trạng máy (điện, hóa chất, vật tư tiêu hao)
+            </td>
+            {Array.from({ length: 31 }, (_, dayIdx) => {
+              const d = dayIdx + 1;
+              const hasOp = Boolean(operators[d]);
+              return (
+                <td key={d} className="border border-black p-0 text-center font-bold text-[14px]">
+                  {hasOp ? '✓' : ''}
+                </td>
+              );
+            })}
+          </tr>
+
+          {/* Row 3: Người thực hiện (Vertical text signature, e.g. THB010) */}
+          <tr className="h-14 bg-white">
+            <td className="border border-black text-center font-bold text-[11px]">3</td>
+            <td className="border border-black px-1.5 text-center text-[12px] font-bold">
+              Người thực hiện
+            </td>
+            {Array.from({ length: 31 }, (_, dayIdx) => {
+              const d = dayIdx + 1;
+              const op = operators[d];
+              return (
+                <td
+                  key={d}
+                  className="border border-black p-0 text-center align-middle overflow-visible"
+                >
+                  {op && (
+                    <span
+                      className="inline-block text-[8.5px] font-bold text-black tracking-tighter"
+                      style={{
+                        writingMode: 'vertical-rl',
+                        transform: 'rotate(180deg)',
+                        whiteSpace: 'nowrap',
+                        maxHeight: '48px',
+                      }}
+                    >
+                      {op}
+                    </span>
+                  )}
+                </td>
+              );
+            })}
+          </tr>
+        </tbody>
+      </table>
+
+      {/* Section II: Bảo dưỡng hằng tuần */}
+      <div className="mt-3.5 mb-1 text-sm font-bold uppercase text-slate-900">
+        II. BẢO DƯỠNG HẰNG TUẦN: (NGƯỜI SỬ DỤNG THỰC HIỆN)
+      </div>
+
+      <table className="w-full border-collapse border border-black text-xs" style={{ tableLayout: 'fixed' }}>
+        <thead>
+          <tr className="bg-white">
+            <th className="border border-black p-1 text-center font-bold" style={{ width: '240px' }}>
+              Thời gian thực hiện
+            </th>
+            <th className="border border-black p-1 text-center font-bold">
+              Nội dung thực hiện
+            </th>
+            <th className="border border-black p-1 text-center font-bold" style={{ width: '190px' }}>
+              Người thực hiện
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr className="h-6">
+            <td className="border border-black px-2 text-left">Tuần 1 (ngày....................)</td>
+            <td className="border border-black px-2" />
+            <td className="border border-black px-2 text-center" />
+          </tr>
+          <tr className="h-6">
+            <td className="border border-black px-2 text-left">Tuần 2 (ngày....................)</td>
+            <td className="border border-black px-2" />
+            <td className="border border-black px-2 text-center" />
+          </tr>
+          <tr className="h-6">
+            <td className="border border-black px-2 text-left">Tuần 3 (ngày....................)</td>
+            <td className="border border-black px-2" />
+            <td className="border border-black px-2 text-center" />
+          </tr>
+          <tr className="h-6">
+            <td className="border border-black px-2 text-left">Tuần 4 (ngày....................)</td>
+            <td className="border border-black px-2" />
+            <td className="border border-black px-2 text-center" />
+          </tr>
+        </tbody>
+      </table>
+
+      {/* Section III: Bảo dưỡng định kỳ */}
+      <div className="mt-3.5 mb-1 text-sm font-bold uppercase text-slate-900">
+        III. BẢO DƯỠNG THÁNG/ QUÝ/ 6 THÁNG/ 12 THÁNG : KS CÔNG TY THỰC HIỆN
+      </div>
+
+      <table className="w-full border-collapse border border-black text-xs" style={{ tableLayout: 'fixed' }}>
+        <thead>
+          <tr className="bg-white">
+            <th className="border border-black p-1 text-center font-bold" style={{ width: '45%' }}>
+              NỘI DUNG BẢO TRÌ
+            </th>
+            <th colSpan={2} className="border border-black p-1 text-center font-bold">
+              Ngày ..........Tháng ..............Năm...............
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr className="h-9">
+            <td className="border border-black px-2 text-left font-normal">
+              Thực hiện theo nội dung của phụ lục bảo trì thiết bị (SD-EQ-AL-003/1001)
+            </td>
+            <td className="border border-black px-2 text-left" style={{ width: '27%' }}>
+              KS thực hiện:
+            </td>
+            <td className="border border-black px-2 text-left" style={{ width: '28%' }}>
+              NV tiếp nhận:
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      {/* Footer */}
+      <div className="flex items-center justify-between text-xs text-slate-800 mt-2 pt-1">
+        <div>FM-EQ-HE-006 V2.0</div>
+        <div>Ngày hiệu lực 01/05/2021</div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Component: Interactive Curve View (Wave Graph with KPIs and tooltips)
  */
 function InteractiveCurveView({
   chartRows,
   specs,
   resolvedCabinet,
   resolvedMonth,
-  hoveredPoint,
-  setHoveredPoint,
   getStaffDisplayName,
 }) {
+  const [hoveredPoint, setHoveredPoint] = useState(null);
   const chartWidth = 980;
   const chartHeight = 380;
   const padding = { top: 45, right: 65, bottom: 65, left: 65 };
