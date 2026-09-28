@@ -2,10 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   Sparkles,
   House,
-  LayoutDashboard,
-  Wallet,
-  Layers,
-  Copyright,
   Settings,
   PanelLeftClose,
   PanelLeftOpen,
@@ -17,6 +13,7 @@ import {
   LogOut,
   User,
 } from 'lucide-react';
+
 
 export default function ErpLayout({
   activeRoute,
@@ -59,11 +56,8 @@ export default function ErpLayout({
     { id: 'trang_chu', label: 'Trang chủ', icon: House },
     { id: 'data', label: 'Dữ liệu nhiệt độ (DATA)', icon: Database },
     { id: 'form', label: 'Ghi nhận nhiệt độ', icon: Thermometer },
-    { id: 'tong_quan', label: 'Tổng quan', icon: LayoutDashboard },
-    { id: 'tai_chinh', label: 'Tài chính', icon: Wallet },
-    { id: 'he_thong', label: 'Hệ thống', icon: Layers },
-    { id: 'ban_quyen', label: 'Thông tin bản quyền', icon: Copyright },
   ];
+
 
   const userName = currentUser?.name || 'Lê Minh Công';
   const userRole = currentUser?.role || 'Tổng Giám Đốc';

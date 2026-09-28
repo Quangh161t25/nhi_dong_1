@@ -1,41 +1,170 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   List,
   BarChart3,
   ArrowLeft,
   Search,
-  Building2,
-  Clock,
-  Tag,
   Printer,
   Download,
   RotateCw,
-  Plus,
+  LayoutTemplate,
   CheckCircle2,
-  AlertCircle,
   TrendingDown,
   TrendingUp,
   FileSpreadsheet,
   X,
-  ExternalLink,
+  Check,
 } from 'lucide-react';
 import { fetchDataRows } from '../services/googleSheets';
 
-export default function DataModule({ onBack, onOpenForm }) {
+export default function DataModule({ onBack }) {
   const [activeTab, setActiveTab] = useState('list'); // 'list' | 'stats'
   const [dataRows, setDataRows] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Filters
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterTenTu, setFilterTenTu] = useState('ALL');
   const [filterViTri, setFilterViTri] = useState('ALL');
   const [filterKhungH, setFilterKhungH] = useState('ALL');
   const [filterKetQua, setFilterKetQua] = useState('ALL');
+
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [previewSignature, setPreviewSignature] = useState(null);
+
+  // Column Visibility Popover
+  const [isColumnMenuOpen, setIsColumnMenuOpen] = useState(false);
+  const columnMenuRef = useRef(null);
+
+  // Visible Columns state
+  const [visibleColumns, setVisibleColumns] = useState(() => {
+    try {
+      const saved = localStorage.getItem('data_table_columns');
+      return saved
+        ? JSON.parse(saved)
+        : {
+            ten: true,
+            ngay_h: true,
+            khung_h: true,
+            vi_tri: true,
+            nguong: true,
+            nhiet_do: true,
+            do_am: true,
+            ket_qua: true,
+            id_nv: true,
+            chu_ky: true,
+            ghi_chu: true,
+          };
+    } catch {
+      return {
+        ten: true,
+        ngay_h: true,
+        khung_h: true,
+        vi_tri: true,
+        nguong: true,
+        nhiet_do: true,
+        do_am: true,
+        ket_qua: true,
+        id_nv: true,
+        chu_ky: true,
+        ghi_chu: true,
+      };
+    }
+  });
+
+  const toggleColumn = (key) => {
+    setVisibleColumns((prev) => {
+      const updated = { ...prev, [key]: !prev[key] };
+      try {
+        localStorage.setItem('data_table_columns', JSON.stringify(updated));
+      } catch (e) {
+        console.error(e);
+      }
+      return updated;
+    });
+  };
+
+  // Close column menu on outside click
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (
+        columnMenuRef.current &&
+        !columnMenuRef.current.contains(event.target)
+      ) {
+        setIsColumnMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Column Widths (Adjustable / Resizable)
+  const [columnWidths, setColumnWidths] = useState({
+    checkbox: 44,
+    ten: 240,
+    ngay_h: 160,
+    khung_h: 100,
+    vi_tri: 160,
+    nguong: 120,
+    nhiet_do: 110,
+    do_am: 100,
+    ket_qua: 110,
+    id_nv: 110,
+    chu_ky: 100,
+    ghi_chu: 220,
+  });
+
+  const startResize = (colKey, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startWidth = columnWidths[colKey] || 120;
+
+    const onMouseMove = (moveEvent) => {
+      const delta = moveEvent.clientX - startX;
+      const newWidth = Math.max(50, startWidth + delta);
+      setColumnWidths((prev) => ({
+        ...prev,
+        [colKey]: newWidth,
+      }));
+    };
+
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  };
+
+  // Parse time helper: sort from newest to oldest (lớn tới nhỏ)
+  const getRecordTimestamp = (r) => {
+    if (r.udt) {
+      const t = new Date(r.udt).getTime();
+      if (!isNaN(t) && t > 0) return t;
+    }
+    if (r.ngay_h) {
+      const parts = r.ngay_h.trim().split(' ');
+      const dateParts = parts[0].split('/');
+      if (dateParts.length === 3) {
+        const d = dateParts[0].padStart(2, '0');
+        const m = dateParts[1].padStart(2, '0');
+        const y = dateParts[2];
+        const timePart = parts[1] || '00:00:00';
+        const t = new Date(`${y}-${m}-${d}T${timePart}`).getTime();
+        if (!isNaN(t) && t > 0) return t;
+      }
+    }
+    return 0;
+  };
 
   const loadData = async () => {
     setIsLoading(true);
     try {
       const rows = await fetchDataRows();
+      // Auto sort theo thời gian đo từ lớn tới nhỏ (Mới nhất lên đầu)
+      rows.sort((a, b) => getRecordTimestamp(b) - getRecordTimestamp(a));
       setDataRows(rows);
     } catch (err) {
       console.error(err);
@@ -49,16 +178,23 @@ export default function DataModule({ onBack, onOpenForm }) {
     loadData();
   }, []);
 
-  // Filter locations
+  // Distinct lists for dropdown filters
+  const tenTuList = useMemo(() => {
+    const set = new Set();
+    dataRows.forEach((r) => {
+      if (r.ten) set.add(r.ten.trim());
+    });
+    return Array.from(set).sort();
+  }, [dataRows]);
+
   const viTriList = useMemo(() => {
     const set = new Set();
     dataRows.forEach((r) => {
       if (r.vi_tri) set.add(r.vi_tri.trim());
     });
-    return Array.from(set);
+    return Array.from(set).sort();
   }, [dataRows]);
 
-  // Filter shifts
   const khungHList = useMemo(() => {
     const set = new Set();
     dataRows.forEach((r) => {
@@ -70,7 +206,7 @@ export default function DataModule({ onBack, onOpenForm }) {
   // Filtered Rows
   const filteredRows = useMemo(() => {
     return dataRows.filter((r) => {
-      // Search
+      // Search text
       const search = searchTerm.trim().toLowerCase();
       if (search) {
         const matchesTen = r.ten.toLowerCase().includes(search);
@@ -82,17 +218,22 @@ export default function DataModule({ onBack, onOpenForm }) {
         }
       }
 
-      // Filter Vi Tri
+      // Filter Tên tủ
+      if (filterTenTu !== 'ALL' && r.ten.trim() !== filterTenTu) {
+        return false;
+      }
+
+      // Filter Vị trí
       if (filterViTri !== 'ALL' && r.vi_tri.trim() !== filterViTri) {
         return false;
       }
 
-      // Filter Khung H
+      // Filter Khung Giờ
       if (filterKhungH !== 'ALL' && r.khung_h.trim() !== filterKhungH) {
         return false;
       }
 
-      // Filter Ket Qua
+      // Filter Kết Quả
       if (filterKetQua !== 'ALL') {
         const kq = (r.ket_qua || '').trim().toUpperCase();
         if (kq !== filterKetQua) return false;
@@ -100,7 +241,7 @@ export default function DataModule({ onBack, onOpenForm }) {
 
       return true;
     });
-  }, [dataRows, searchTerm, filterViTri, filterKhungH, filterKetQua]);
+  }, [dataRows, searchTerm, filterTenTu, filterViTri, filterKhungH, filterKetQua]);
 
   // Checkbox toggle
   const toggleSelectAll = () => {
@@ -192,13 +333,26 @@ export default function DataModule({ onBack, onOpenForm }) {
     });
 
     const datRate = total > 0 ? ((datCount / total) * 100).toFixed(1) : 0;
-
     return { total, datCount, thapCount, caoCount, datRate };
   }, [dataRows]);
 
+  const columnLabels = [
+    { key: 'ten', label: 'Tên tủ' },
+    { key: 'ngay_h', label: 'Thời gian đo' },
+    { key: 'khung_h', label: 'Khung giờ' },
+    { key: 'vi_tri', label: 'Vị trí' },
+    { key: 'nguong', label: 'Ngưỡng (°C)' },
+    { key: 'nhiet_do', label: 'Nhiệt độ (°C)' },
+    { key: 'do_am', label: 'Độ ẩm (%)' },
+    { key: 'ket_qua', label: 'Kết quả' },
+    { key: 'id_nv', label: 'Nhân viên' },
+    { key: 'chu_ky', label: 'Chữ ký' },
+    { key: 'ghi_chu', label: 'Ghi chú' },
+  ];
+
   return (
     <div className="flex h-full flex-col space-y-3 animate-fade-in-up">
-      {/* Top Tabs matching Image 2 */}
+      {/* Top Tabs */}
       <div className="flex items-center justify-between">
         <div className="inline-flex rounded-xl border border-slate-200 bg-slate-100/80 p-1 text-xs">
           <button
@@ -232,16 +386,16 @@ export default function DataModule({ onBack, onOpenForm }) {
           <span className="font-extrabold text-blue-600">
             {filteredRows.length}
           </span>{' '}
-          / {dataRows.length} bản ghi
+          / {dataRows.length} bản ghi (Đã xếp từ mới nhất)
         </div>
       </div>
 
-      {/* Main Container Card matching Image 2 */}
+      {/* Main Container Card */}
       <div className="flex flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
-        {/* Toolbar matching Image 2 */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3">
-          {/* Left tools: Back button, Search, Filters */}
-          <div className="flex flex-wrap items-center gap-2.5">
+        {/* Toolbar */}
+        <div className="flex flex-wrap items-center justify-between gap-2.5 border-b border-slate-200 bg-white px-4 py-3">
+          {/* Left tools: Back, Search, Dropdown filters */}
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={onBack}
@@ -252,23 +406,39 @@ export default function DataModule({ onBack, onOpenForm }) {
             </button>
 
             {/* Search Input */}
-            <div className="relative w-64 max-w-xs">
+            <div className="relative w-52 max-w-xs">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Tìm tên tủ, vị trí, NV..."
+                placeholder="Tìm kiếm nhanh..."
                 className="h-8 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-xs text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               />
             </div>
 
-            {/* Filter Vị trí */}
+            {/* Filter 1: Lọc theo Tên Tủ */}
+            <div className="relative">
+              <select
+                value={filterTenTu}
+                onChange={(e) => setFilterTenTu(e.target.value)}
+                className="h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-700 focus:border-blue-500 focus:outline-none max-w-[170px] truncate"
+              >
+                <option value="ALL">Tên tủ: Tất cả</option>
+                {tenTuList.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filter 2: Vị trí */}
             <div className="relative">
               <select
                 value={filterViTri}
                 onChange={(e) => setFilterViTri(e.target.value)}
-                className="h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-600 focus:border-blue-500 focus:outline-none"
+                className="h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-700 focus:border-blue-500 focus:outline-none max-w-[150px] truncate"
               >
                 <option value="ALL">Vị trí: Tất cả</option>
                 {viTriList.map((vt) => (
@@ -279,12 +449,12 @@ export default function DataModule({ onBack, onOpenForm }) {
               </select>
             </div>
 
-            {/* Filter Khung Giờ */}
+            {/* Filter 3: Khung Giờ */}
             <div className="relative">
               <select
                 value={filterKhungH}
                 onChange={(e) => setFilterKhungH(e.target.value)}
-                className="h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-600 focus:border-blue-500 focus:outline-none"
+                className="h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-700 focus:border-blue-500 focus:outline-none"
               >
                 <option value="ALL">Khung giờ: Tất cả</option>
                 {khungHList.map((kh) => (
@@ -295,12 +465,12 @@ export default function DataModule({ onBack, onOpenForm }) {
               </select>
             </div>
 
-            {/* Filter Trạng thái */}
+            {/* Filter 4: Trạng thái */}
             <div className="relative">
               <select
                 value={filterKetQua}
                 onChange={(e) => setFilterKetQua(e.target.value)}
-                className="h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-600 focus:border-blue-500 focus:outline-none"
+                className="h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-700 focus:border-blue-500 focus:outline-none"
               >
                 <option value="ALL">Trạng thái: Tất cả</option>
                 <option value="ĐẠT">ĐẠT (Bình thường)</option>
@@ -310,7 +480,7 @@ export default function DataModule({ onBack, onOpenForm }) {
             </div>
           </div>
 
-          {/* Right tools: Action buttons matching Image 2 */}
+          {/* Right tools: In, Load lại, Icon chỉnh cột (LayoutTemplate), Xuất file */}
           <div className="flex items-center gap-1.5">
             <button
               type="button"
@@ -321,6 +491,7 @@ export default function DataModule({ onBack, onOpenForm }) {
               <Printer className="h-4 w-4" />
             </button>
 
+            {/* Nút Load lại */}
             <button
               type="button"
               onClick={loadData}
@@ -332,6 +503,81 @@ export default function DataModule({ onBack, onOpenForm }) {
               />
             </button>
 
+            {/* Icon nhỏ cạnh nút load lại để điều chỉnh cột (LayoutTemplate) */}
+            <div className="relative" ref={columnMenuRef}>
+              <div className="relative inline-flex">
+                <button
+                  type="button"
+                  onClick={() => setIsColumnMenuOpen(!isColumnMenuOpen)}
+                  title="Tùy chỉnh hiển thị cột"
+                  className={`h-8 w-8 flex items-center justify-center border rounded-lg transition-all ${
+                    isColumnMenuOpen
+                      ? 'border-blue-500 bg-blue-50 text-blue-600'
+                      : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+                  }`}
+                >
+                  <LayoutTemplate className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Column selection Popover Menu */}
+              {isColumnMenuOpen && (
+                <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl z-50 animate-fade-in-up">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
+                    <span className="text-xs font-bold text-slate-800">
+                      Hiển thị cột
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setVisibleColumns({
+                          ten: true,
+                          ngay_h: true,
+                          khung_h: true,
+                          vi_tri: true,
+                          nguong: true,
+                          nhiet_do: true,
+                          do_am: true,
+                          ket_qua: true,
+                          id_nv: true,
+                          chu_ky: true,
+                          ghi_chu: true,
+                        })
+                      }
+                      className="text-[10px] font-bold text-blue-600 hover:underline"
+                    >
+                      Bật tất cả
+                    </button>
+                  </div>
+
+                  <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+                    {columnLabels.map((col) => {
+                      const isChecked = visibleColumns[col.key];
+                      return (
+                        <label
+                          key={col.key}
+                          className="flex items-center gap-2 px-1.5 py-1 rounded-lg hover:bg-slate-50 cursor-pointer text-xs select-none text-slate-700"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => toggleColumn(col.key)}
+                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span
+                            className={isChecked ? 'font-medium' : 'text-slate-400'}
+                          >
+                            {col.label}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Nút Xuất file CSV */}
             <button
               type="button"
               onClick={exportToCSV}
@@ -341,26 +587,17 @@ export default function DataModule({ onBack, onOpenForm }) {
               <Download className="h-3.5 w-3.5 text-slate-500" />
               <span className="hidden sm:inline">Xuất file</span>
             </button>
-
-            <button
-              type="button"
-              onClick={onOpenForm}
-              className="flex h-8 items-center gap-1.5 rounded-lg bg-blue-600 px-3 text-xs font-bold text-white shadow-xs hover:bg-blue-700 active:scale-95 transition"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              <span>Ghi nhận mới</span>
-            </button>
           </div>
         </div>
 
-        {/* Tab 1: List Table */}
+        {/* Tab 1: List Table with Resizable Columns */}
         {activeTab === 'list' && (
-          <div className="flex-1 overflow-auto">
+          <div className="flex-1 overflow-auto custom-scrollbar select-none">
             {isLoading ? (
               <div className="flex h-64 flex-col items-center justify-center gap-3">
                 <div className="custom-spinner" />
                 <p className="text-xs font-semibold text-slate-400">
-                  Đang tải dữ liệu từ Google Sheets (Sheet DATA)...
+                  Đang đồng bộ dữ liệu từ Google Sheets (Sheet DATA)...
                 </p>
               </div>
             ) : filteredRows.length === 0 ? (
@@ -370,38 +607,252 @@ export default function DataModule({ onBack, onOpenForm }) {
                   Không tìm thấy bản ghi nào phù hợp.
                 </p>
                 <p className="text-xs">
-                  Thử thay đổi bộ lọc hoặc bấm nút "Ghi nhận mới" để tạo số liệu.
+                  Thử thay đổi bộ lọc tìm kiếm để xem kết quả.
                 </p>
               </div>
             ) : (
-              <table className="w-full text-left text-xs border-collapse">
+              <table
+                className="text-left text-xs border-separate border-spacing-0"
+                style={{ tableLayout: 'fixed', minWidth: '100%' }}
+              >
                 <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-100 text-slate-700 font-semibold select-none">
                   <tr>
-                    <th className="w-10 px-3 py-2.5 text-center">
-                      <input
-                        type="checkbox"
-                        checked={
-                          selectedIds.size === filteredRows.length &&
-                          filteredRows.length > 0
-                        }
-                        onChange={toggleSelectAll}
-                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                      />
+                    {/* Checkbox column */}
+                    <th
+                      className="sticky left-0 z-20 bg-slate-100 border-b border-r border-slate-200 text-center py-2 relative"
+                      style={{
+                        width: `${columnWidths.checkbox}px`,
+                        minWidth: `${columnWidths.checkbox}px`,
+                        maxWidth: `${columnWidths.checkbox}px`,
+                      }}
+                    >
+                      <div className="flex items-center justify-center">
+                        <input
+                          type="checkbox"
+                          checked={
+                            selectedIds.size === filteredRows.length &&
+                            filteredRows.length > 0
+                          }
+                          onChange={toggleSelectAll}
+                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                        />
+                      </div>
                     </th>
-                    <th className="px-3 py-2.5">Tên tủ</th>
-                    <th className="px-3 py-2.5">Thời gian đo</th>
-                    <th className="px-3 py-2.5">Khung giờ</th>
-                    <th className="px-3 py-2.5">Vị trí</th>
-                    <th className="px-3 py-2.5 text-center">Ngưỡng (°C)</th>
-                    <th className="px-3 py-2.5 text-center">Nhiệt độ (°C)</th>
-                    <th className="px-3 py-2.5 text-center">Độ ẩm (%)</th>
-                    <th className="px-3 py-2.5 text-center">Kết quả</th>
-                    <th className="px-3 py-2.5">Nhân viên</th>
-                    <th className="px-3 py-2.5">Chữ ký</th>
-                    <th className="px-3 py-2.5">Ghi chú</th>
+
+                    {/* Tên tủ */}
+                    {visibleColumns.ten && (
+                      <th
+                        className="px-3 py-2 border-b border-r border-slate-200 relative whitespace-nowrap"
+                        style={{
+                          width: `${columnWidths.ten}px`,
+                          minWidth: `${columnWidths.ten}px`,
+                        }}
+                      >
+                        <span className="truncate">Tên tủ</span>
+                        {/* Resizer handle */}
+                        <div
+                          onMouseDown={(e) => startResize('ten', e)}
+                          title="Kéo để điều chỉnh độ rộng cột"
+                          className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-blue-400 active:bg-blue-600 transition-colors z-20 flex justify-end items-center pr-0.5 group"
+                        >
+                          <div className="w-[1px] h-3 bg-slate-300 group-hover:bg-blue-600" />
+                        </div>
+                      </th>
+                    )}
+
+                    {/* Ngày giờ đo */}
+                    {visibleColumns.ngay_h && (
+                      <th
+                        className="px-3 py-2 border-b border-r border-slate-200 relative whitespace-nowrap"
+                        style={{
+                          width: `${columnWidths.ngay_h}px`,
+                          minWidth: `${columnWidths.ngay_h}px`,
+                        }}
+                      >
+                        <span className="truncate">Thời gian đo</span>
+                        <div
+                          onMouseDown={(e) => startResize('ngay_h', e)}
+                          className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-blue-400 active:bg-blue-600 transition-colors z-20 flex justify-end items-center pr-0.5 group"
+                        >
+                          <div className="w-[1px] h-3 bg-slate-300 group-hover:bg-blue-600" />
+                        </div>
+                      </th>
+                    )}
+
+                    {/* Khung giờ */}
+                    {visibleColumns.khung_h && (
+                      <th
+                        className="px-3 py-2 border-b border-r border-slate-200 relative whitespace-nowrap"
+                        style={{
+                          width: `${columnWidths.khung_h}px`,
+                          minWidth: `${columnWidths.khung_h}px`,
+                        }}
+                      >
+                        <span className="truncate">Khung giờ</span>
+                        <div
+                          onMouseDown={(e) => startResize('khung_h', e)}
+                          className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-blue-400 active:bg-blue-600 transition-colors z-20 flex justify-end items-center pr-0.5 group"
+                        >
+                          <div className="w-[1px] h-3 bg-slate-300 group-hover:bg-blue-600" />
+                        </div>
+                      </th>
+                    )}
+
+                    {/* Vị trí */}
+                    {visibleColumns.vi_tri && (
+                      <th
+                        className="px-3 py-2 border-b border-r border-slate-200 relative whitespace-nowrap"
+                        style={{
+                          width: `${columnWidths.vi_tri}px`,
+                          minWidth: `${columnWidths.vi_tri}px`,
+                        }}
+                      >
+                        <span className="truncate">Vị trí</span>
+                        <div
+                          onMouseDown={(e) => startResize('vi_tri', e)}
+                          className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-blue-400 active:bg-blue-600 transition-colors z-20 flex justify-end items-center pr-0.5 group"
+                        >
+                          <div className="w-[1px] h-3 bg-slate-300 group-hover:bg-blue-600" />
+                        </div>
+                      </th>
+                    )}
+
+                    {/* Ngưỡng min max */}
+                    {visibleColumns.nguong && (
+                      <th
+                        className="px-3 py-2 border-b border-r border-slate-200 text-center relative whitespace-nowrap"
+                        style={{
+                          width: `${columnWidths.nguong}px`,
+                          minWidth: `${columnWidths.nguong}px`,
+                        }}
+                      >
+                        <span className="truncate">Ngưỡng (°C)</span>
+                        <div
+                          onMouseDown={(e) => startResize('nguong', e)}
+                          className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-blue-400 active:bg-blue-600 transition-colors z-20 flex justify-end items-center pr-0.5 group"
+                        >
+                          <div className="w-[1px] h-3 bg-slate-300 group-hover:bg-blue-600" />
+                        </div>
+                      </th>
+                    )}
+
+                    {/* Nhiệt độ đo */}
+                    {visibleColumns.nhiet_do && (
+                      <th
+                        className="px-3 py-2 border-b border-r border-slate-200 text-center relative whitespace-nowrap"
+                        style={{
+                          width: `${columnWidths.nhiet_do}px`,
+                          minWidth: `${columnWidths.nhiet_do}px`,
+                        }}
+                      >
+                        <span className="truncate">Nhiệt độ (°C)</span>
+                        <div
+                          onMouseDown={(e) => startResize('nhiet_do', e)}
+                          className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-blue-400 active:bg-blue-600 transition-colors z-20 flex justify-end items-center pr-0.5 group"
+                        >
+                          <div className="w-[1px] h-3 bg-slate-300 group-hover:bg-blue-600" />
+                        </div>
+                      </th>
+                    )}
+
+                    {/* Độ ẩm đo */}
+                    {visibleColumns.do_am && (
+                      <th
+                        className="px-3 py-2 border-b border-r border-slate-200 text-center relative whitespace-nowrap"
+                        style={{
+                          width: `${columnWidths.do_am}px`,
+                          minWidth: `${columnWidths.do_am}px`,
+                        }}
+                      >
+                        <span className="truncate">Độ ẩm (%)</span>
+                        <div
+                          onMouseDown={(e) => startResize('do_am', e)}
+                          className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-blue-400 active:bg-blue-600 transition-colors z-20 flex justify-end items-center pr-0.5 group"
+                        >
+                          <div className="w-[1px] h-3 bg-slate-300 group-hover:bg-blue-600" />
+                        </div>
+                      </th>
+                    )}
+
+                    {/* Kết quả */}
+                    {visibleColumns.ket_qua && (
+                      <th
+                        className="px-3 py-2 border-b border-r border-slate-200 text-center relative whitespace-nowrap"
+                        style={{
+                          width: `${columnWidths.ket_qua}px`,
+                          minWidth: `${columnWidths.ket_qua}px`,
+                        }}
+                      >
+                        <span className="truncate">Kết quả</span>
+                        <div
+                          onMouseDown={(e) => startResize('ket_qua', e)}
+                          className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-blue-400 active:bg-blue-600 transition-colors z-20 flex justify-end items-center pr-0.5 group"
+                        >
+                          <div className="w-[1px] h-3 bg-slate-300 group-hover:bg-blue-600" />
+                        </div>
+                      </th>
+                    )}
+
+                    {/* Nhân viên */}
+                    {visibleColumns.id_nv && (
+                      <th
+                        className="px-3 py-2 border-b border-r border-slate-200 relative whitespace-nowrap"
+                        style={{
+                          width: `${columnWidths.id_nv}px`,
+                          minWidth: `${columnWidths.id_nv}px`,
+                        }}
+                      >
+                        <span className="truncate">Nhân viên</span>
+                        <div
+                          onMouseDown={(e) => startResize('id_nv', e)}
+                          className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-blue-400 active:bg-blue-600 transition-colors z-20 flex justify-end items-center pr-0.5 group"
+                        >
+                          <div className="w-[1px] h-3 bg-slate-300 group-hover:bg-blue-600" />
+                        </div>
+                      </th>
+                    )}
+
+                    {/* Chữ ký */}
+                    {visibleColumns.chu_ky && (
+                      <th
+                        className="px-3 py-2 border-b border-r border-slate-200 text-center relative whitespace-nowrap"
+                        style={{
+                          width: `${columnWidths.chu_ky}px`,
+                          minWidth: `${columnWidths.chu_ky}px`,
+                        }}
+                      >
+                        <span className="truncate">Chữ ký</span>
+                        <div
+                          onMouseDown={(e) => startResize('chu_ky', e)}
+                          className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-blue-400 active:bg-blue-600 transition-colors z-20 flex justify-end items-center pr-0.5 group"
+                        >
+                          <div className="w-[1px] h-3 bg-slate-300 group-hover:bg-blue-600" />
+                        </div>
+                      </th>
+                    )}
+
+                    {/* Ghi chú */}
+                    {visibleColumns.ghi_chu && (
+                      <th
+                        className="px-3 py-2 border-b border-slate-200 relative whitespace-nowrap"
+                        style={{
+                          width: `${columnWidths.ghi_chu}px`,
+                          minWidth: `${columnWidths.ghi_chu}px`,
+                        }}
+                      >
+                        <span className="truncate">Ghi chú</span>
+                        <div
+                          onMouseDown={(e) => startResize('ghi_chu', e)}
+                          className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-blue-400 active:bg-blue-600 transition-colors z-20 flex justify-end items-center pr-0.5 group"
+                        >
+                          <div className="w-[1px] h-3 bg-slate-300 group-hover:bg-blue-600" />
+                        </div>
+                      </th>
+                    )}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+
+                <tbody className="divide-y divide-slate-100 bg-white">
                   {filteredRows.map((r, i) => {
                     const rowKey = r.id || r.rowIndex;
                     const isSelected = selectedIds.has(rowKey);
@@ -409,122 +860,147 @@ export default function DataModule({ onBack, onOpenForm }) {
                     return (
                       <tr
                         key={rowKey}
-                        className={`transition-colors hover:bg-blue-50/40 ${
+                        className={`transition-colors hover:bg-blue-50/50 ${
                           isSelected
-                            ? 'bg-blue-50/70'
+                            ? 'bg-blue-50/80'
                             : i % 2 === 1
-                            ? 'bg-slate-50/40'
+                            ? 'bg-slate-50/30'
                             : 'bg-white'
                         }`}
                       >
-                        <td className="w-10 px-3 py-2.5 text-center">
+                        {/* Checkbox */}
+                        <td className="sticky left-0 z-10 bg-inherit border-b border-r border-slate-200 text-center py-2.5">
                           <input
                             type="checkbox"
                             checked={isSelected}
                             onChange={() => toggleSelectRow(rowKey)}
-                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                           />
                         </td>
 
                         {/* Tên tủ */}
-                        <td className="px-3 py-2.5 font-bold text-slate-800">
-                          <div className="flex items-center gap-2">
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-100 font-bold text-blue-700 text-[11px]">
-                              {r.ten.charAt(0) || 'T'}
-                            </div>
-                            <div>
-                              <div className="leading-tight">{r.ten}</div>
-                              <div className="text-[10px] font-medium text-slate-400">
-                                Mã: {r.id_tu || r.qr_code}
+                        {visibleColumns.ten && (
+                          <td className="px-3 py-2.5 border-b border-r border-slate-100 font-bold text-slate-800 overflow-hidden">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-100 font-bold text-blue-700 text-[11px]">
+                                {r.ten ? r.ten.charAt(0).toUpperCase() : 'T'}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="leading-tight truncate" title={r.ten}>
+                                  {r.ten}
+                                </div>
+                                <div className="text-[10px] font-medium text-slate-400 truncate">
+                                  Mã: {r.id_tu || r.qr_code}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </td>
+                          </td>
+                        )}
 
-                        {/* Ngày giờ */}
-                        <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap">
-                          {r.ngay_h || r.ngay}
-                        </td>
+                        {/* Thời gian đo */}
+                        {visibleColumns.ngay_h && (
+                          <td className="px-3 py-2.5 border-b border-r border-slate-100 text-slate-600 whitespace-nowrap overflow-hidden truncate">
+                            {r.ngay_h || r.ngay}
+                          </td>
+                        )}
 
                         {/* Khung giờ */}
-                        <td className="px-3 py-2.5 whitespace-nowrap">
-                          <span className="rounded-md bg-slate-100 px-2 py-0.5 font-semibold text-slate-700">
-                            {r.khung_h}
-                          </span>
-                        </td>
+                        {visibleColumns.khung_h && (
+                          <td className="px-3 py-2.5 border-b border-r border-slate-100 whitespace-nowrap">
+                            <span className="rounded-md bg-slate-100 px-2 py-0.5 font-bold text-slate-700">
+                              {r.khung_h}
+                            </span>
+                          </td>
+                        )}
 
                         {/* Vị trí */}
-                        <td className="px-3 py-2.5 text-slate-600">
-                          {r.vi_tri || '—'}
-                        </td>
+                        {visibleColumns.vi_tri && (
+                          <td className="px-3 py-2.5 border-b border-r border-slate-100 text-slate-600 overflow-hidden truncate">
+                            {r.vi_tri || '—'}
+                          </td>
+                        )}
 
-                        {/* Ngưỡng min max */}
-                        <td className="px-3 py-2.5 text-center text-slate-500 whitespace-nowrap font-medium">
-                          {r.nhiet_do_min && r.nhiet_do_max
-                            ? `${r.nhiet_do_min} ~ ${r.nhiet_do_max}`
-                            : '—'}
-                        </td>
+                        {/* Ngưỡng (°C) */}
+                        {visibleColumns.nguong && (
+                          <td className="px-3 py-2.5 border-b border-r border-slate-100 text-center text-slate-500 whitespace-nowrap font-medium">
+                            {r.nhiet_do_min && r.nhiet_do_max
+                              ? `${r.nhiet_do_min} ~ ${r.nhiet_do_max}`
+                              : '—'}
+                          </td>
+                        )}
 
                         {/* Nhiệt độ đo */}
-                        <td className="px-3 py-2.5 text-center whitespace-nowrap">
-                          <span className="font-extrabold text-sm text-slate-900">
-                            {r.nhiet_do_do_dc !== '' ? r.nhiet_do_do_dc : '—'}
-                          </span>
-                        </td>
+                        {visibleColumns.nhiet_do && (
+                          <td className="px-3 py-2.5 border-b border-r border-slate-100 text-center whitespace-nowrap">
+                            <span className="font-extrabold text-sm text-slate-900">
+                              {r.nhiet_do_do_dc !== '' ? r.nhiet_do_do_dc : '—'}
+                            </span>
+                          </td>
+                        )}
 
-                        {/* Độ ẩm đo */}
-                        <td className="px-3 py-2.5 text-center text-slate-600 whitespace-nowrap font-semibold">
-                          {r.do_am_do_dc ? `${r.do_am_do_dc}%` : '—'}
-                        </td>
+                        {/* Độ ẩm */}
+                        {visibleColumns.do_am && (
+                          <td className="px-3 py-2.5 border-b border-r border-slate-100 text-center text-slate-600 whitespace-nowrap font-semibold">
+                            {r.do_am_do_dc ? `${r.do_am_do_dc}%` : '—'}
+                          </td>
+                        )}
 
-                        {/* Kết quả badge matching Image 2 */}
-                        <td className="px-3 py-2.5 text-center whitespace-nowrap">
-                          {r.ket_qua === 'ĐẠT' ? (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700">
-                              <CheckCircle2 className="h-3 w-3" />
-                              ĐẠT
-                            </span>
-                          ) : r.ket_qua === 'THẤP' ? (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-cyan-300 bg-cyan-50 px-2.5 py-0.5 text-[11px] font-bold text-cyan-800">
-                              <TrendingDown className="h-3 w-3" />
-                              THẤP
-                            </span>
-                          ) : r.ket_qua === 'CAO' ? (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-rose-300 bg-rose-50 px-2.5 py-0.5 text-[11px] font-bold text-rose-700">
-                              <TrendingUp className="h-3 w-3" />
-                              CAO
-                            </span>
-                          ) : (
-                            <span className="text-slate-400 font-medium">—</span>
-                          )}
-                        </td>
+                        {/* Kết quả badge */}
+                        {visibleColumns.ket_qua && (
+                          <td className="px-3 py-2.5 border-b border-r border-slate-100 text-center whitespace-nowrap">
+                            {r.ket_qua === 'ĐẠT' ? (
+                              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700">
+                                <CheckCircle2 className="h-3 w-3" />
+                                ĐẠT
+                              </span>
+                            ) : r.ket_qua === 'THẤP' ? (
+                              <span className="inline-flex items-center gap-1 rounded-full border border-cyan-300 bg-cyan-50 px-2.5 py-0.5 text-[11px] font-bold text-cyan-800">
+                                <TrendingDown className="h-3 w-3" />
+                                THẤP
+                              </span>
+                            ) : r.ket_qua === 'CAO' ? (
+                              <span className="inline-flex items-center gap-1 rounded-full border border-rose-300 bg-rose-50 px-2.5 py-0.5 text-[11px] font-bold text-rose-700">
+                                <TrendingUp className="h-3 w-3" />
+                                CAO
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 font-medium">—</span>
+                            )}
+                          </td>
+                        )}
 
                         {/* Nhân viên */}
-                        <td className="px-3 py-2.5 font-medium text-slate-700 whitespace-nowrap">
-                          {r.id_nv}
-                        </td>
+                        {visibleColumns.id_nv && (
+                          <td className="px-3 py-2.5 border-b border-r border-slate-100 font-medium text-slate-700 whitespace-nowrap overflow-hidden truncate">
+                            {r.id_nv}
+                          </td>
+                        )}
 
                         {/* Chữ ký */}
-                        <td className="px-3 py-2.5 whitespace-nowrap">
-                          {r.chu_ky ? (
-                            <button
-                              type="button"
-                              onClick={() => setPreviewSignature(r.chu_ky)}
-                              className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-blue-600 hover:bg-blue-50"
-                            >
-                              Xem chữ ký
-                            </button>
-                          ) : (
-                            <span className="text-slate-300 italic text-[11px]">
-                              Chưa ký
-                            </span>
-                          )}
-                        </td>
+                        {visibleColumns.chu_ky && (
+                          <td className="px-3 py-2.5 border-b border-r border-slate-100 text-center whitespace-nowrap">
+                            {r.chu_ky ? (
+                              <button
+                                type="button"
+                                onClick={() => setPreviewSignature(r.chu_ky)}
+                                className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-blue-600 hover:bg-blue-50"
+                              >
+                                Xem chữ ký
+                              </button>
+                            ) : (
+                              <span className="text-slate-300 italic text-[11px]">
+                                Chưa ký
+                              </span>
+                            )}
+                          </td>
+                        )}
 
                         {/* Ghi chú */}
-                        <td className="px-3 py-2.5 text-slate-500 max-w-xs truncate">
-                          {r.ghi_chu || '—'}
-                        </td>
+                        {visibleColumns.ghi_chu && (
+                          <td className="px-3 py-2.5 border-b border-slate-100 text-slate-500 overflow-hidden truncate" title={r.ghi_chu}>
+                            {r.ghi_chu || '—'}
+                          </td>
+                        )}
                       </tr>
                     );
                   })}

@@ -25,12 +25,6 @@ export default function App() {
     const rawPath = window.location.pathname.toLowerCase().replace(/\/+$/, '');
     if (rawPath === '/trang_chu' || rawPath === '/trang-chu') return 'trang_chu';
     if (rawPath === '/data') return 'data';
-    if (rawPath === '/tong-quan' || rawPath === '/tong_quan') return 'tong_quan';
-    if (rawPath === '/tai-chinh' || rawPath === '/tai_chinh') return 'tai_chinh';
-    if (rawPath === '/he-thong' || rawPath === '/he_thong') return 'he_thong';
-    if (rawPath === '/thong-tin-ban-quyen' || rawPath === '/ban_quyen') return 'ban_quyen';
-
-    // Mặc định không có /trang_chu: Form nhập liệu
     return 'form';
   };
 
@@ -46,15 +40,12 @@ export default function App() {
     if (route === 'trang_chu') targetPath = '/trang_chu';
     else if (route === 'data') targetPath = '/data';
     else if (route === 'form') targetPath = '/';
-    else if (route === 'tong_quan') targetPath = '/tong-quan';
-    else if (route === 'tai_chinh') targetPath = '/tai-chinh';
-    else if (route === 'he-thong') targetPath = '/he-thong';
-    else if (route === 'ban_quyen') targetPath = '/thong-tin-ban-quyen';
 
     if (window.location.pathname !== targetPath) {
       window.history.pushState(null, '', targetPath);
     }
   };
+
 
   useEffect(() => {
     const handlePopState = () => {
@@ -121,14 +112,6 @@ export default function App() {
     switch (activeRoute) {
       case 'data':
         return ['Dữ liệu nhiệt độ (DATA)'];
-      case 'tong_quan':
-        return ['Tổng quan'];
-      case 'tai_chinh':
-        return ['Tài chính'];
-      case 'he-thong':
-        return ['Hệ thống'];
-      case 'ban_quyen':
-        return ['Thông tin bản quyền'];
       default:
         return [];
     }
@@ -160,7 +143,7 @@ export default function App() {
     );
   }
 
-  // 2. Nếu CÓ /trang_chu hoặc /data hoặc phân hệ ERP: Mở giao diện ERP Layout
+  // 2. Nếu CÓ /trang_chu hoặc /data: Mở giao diện ERP Layout
   return (
     <ErpLayout
       activeRoute={activeRoute}
@@ -179,40 +162,9 @@ export default function App() {
       {activeRoute === 'data' && (
         <DataModule
           onBack={() => navigateTo('trang_chu')}
-          onOpenForm={() => navigateTo('form')}
         />
-      )}
-
-      {['tong_quan', 'tai_chinh', 'he_thong', 'ban_quyen'].includes(
-        activeRoute
-      ) && (
-        <div className="mx-auto max-w-3xl rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-xs">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
-            <span className="text-2xl font-black">ℹ</span>
-          </div>
-          <h2 className="text-lg font-bold text-slate-800 capitalize">
-            Module {activeRoute.replace('_', ' ')}
-          </h2>
-          <p className="mt-2 text-xs text-slate-500">
-            Phân hệ đang trong quá trình đồng bộ. Bạn có thể sử dụng đầy đủ chức
-            năng tại phân hệ{' '}
-            <button
-              onClick={() => navigateTo('data')}
-              className="font-bold text-blue-600 hover:underline"
-            >
-              Dữ liệu nhiệt độ (DATA)
-            </button>{' '}
-            hoặc{' '}
-            <button
-              onClick={() => navigateTo('form')}
-              className="font-bold text-teal-600 hover:underline"
-            >
-              Form ghi nhận nhiệt độ (/)
-            </button>
-            .
-          </p>
-        </div>
       )}
     </ErpLayout>
   );
 }
+
