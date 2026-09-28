@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   List,
   BarChart3,
+  LineChart,
   ArrowLeft,
   Search,
   Printer,
@@ -16,15 +17,17 @@ import {
   Check,
 } from 'lucide-react';
 import { fetchDataRows } from '../services/googleSheets';
+import MonthlyChartModule from './MonthlyChartModule';
 
 export default function DataModule({ onBack }) {
-  const [activeTab, setActiveTab] = useState('list'); // 'list' | 'stats'
+  const [activeTab, setActiveTab] = useState('list'); // 'list' | 'stats' | 'chart'
   const [dataRows, setDataRows] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTenTu, setFilterTenTu] = useState('ALL');
+  const [filterThang, setFilterThang] = useState('ALL');
   const [filterViTri, setFilterViTri] = useState('ALL');
   const [filterKhungH, setFilterKhungH] = useState('ALL');
   const [filterKetQua, setFilterKetQua] = useState('ALL');
@@ -178,6 +181,37 @@ export default function DataModule({ onBack }) {
     loadData();
   }, []);
 
+  // String normalization helper for accurate Vietnamese comparison
+  const cleanStr = (s) =>
+    String(s || '')
+      .normalize('NFC')
+      .trim()
+      .toLowerCase();
+
+  // Helper: Extract month/year (MM/YYYY)
+  const getMonthYear = (r) => {
+    if (r.nam_thang && r.nam_thang.includes('/')) {
+      const parts = r.nam_thang.trim().split('/');
+      if (parts.length === 2) {
+        return `${parts[1].padStart(2, '0')}/${parts[0]}`;
+      }
+    }
+    if (r.ngay) {
+      const parts = r.ngay.trim().split('/');
+      if (parts.length === 3) {
+        return `${parts[1].padStart(2, '0')}/${parts[2]}`;
+      }
+    }
+    if (r.ngay_h) {
+      const datePart = r.ngay_h.trim().split(' ')[0];
+      const parts = datePart.split('/');
+      if (parts.length === 3) {
+        return `${parts[1].padStart(2, '0')}/${parts[2]}`;
+      }
+    }
+    return '';
+  };
+
   // Distinct lists for dropdown filters
   const tenTuList = useMemo(() => {
     const set = new Set();
@@ -185,6 +219,19 @@ export default function DataModule({ onBack }) {
       if (r.ten) set.add(r.ten.trim());
     });
     return Array.from(set).sort();
+  }, [dataRows]);
+
+  const thangList = useMemo(() => {
+    const set = new Set();
+    dataRows.forEach((r) => {
+      const m = getMonthYear(r);
+      if (m) set.add(m);
+    });
+    return Array.from(set).sort((a, b) => {
+      const [ma, ya] = a.split('/').map(Number);
+      const [mb, yb] = b.split('/').map(Number);
+      return yb - ya || mb - ma;
+    });
   }, [dataRows]);
 
   const viTriList = useMemo(() => {
@@ -207,55 +254,74 @@ export default function DataModule({ onBack }) {
   const filteredRows = useMemo(() => {
     return dataRows.filter((r) => {
       // Search text
-      const search = searchTerm.trim().toLowerCase();
+      const search = cleanStr(searchTerm);
       if (search) {
-        const matchesTen = r.ten.toLowerCase().includes(search);
-        const matchesId = r.id_tu.toLowerCase().includes(search);
-        const matchesViTri = r.vi_tri.toLowerCase().includes(search);
-        const matchesNv = r.id_nv.toLowerCase().includes(search);
+        const matchesTen = cleanStr(r.ten).includes(search);
+        const matchesId = cleanStr(r.id_tu).includes(search);
+        const matchesViTri = cleanStr(r.vi_tri).includes(search);
+        const matchesNv = cleanStr(r.id_nv).includes(search);
         if (!matchesTen && !matchesId && !matchesViTri && !matchesNv) {
           return false;
         }
       }
 
-      // Filter Tên tủ
-      if (filterTenTu !== 'ALL' && r.ten.trim() !== filterTenTu) {
-        return false;
+      // Filter Tên tủ (dựa vào tên tủ hoặc mã tủ)
+      if (filterTenTu !== 'ALL') {
+        const target = cleanStr(filterTenTu);
+        const rTen = cleanStr(r.ten);
+        const rIdTu = cleanStr(r.id_tu);
+        if (rTen !== target && rIdTu !== target) {
+          return false;
+        }
+      }
+
+      // Filter Tháng (MM/YYYY)
+      if (filterThang !== 'ALL') {
+        const m = getMonthYear(r);
+        if (m !== filterThang) {
+          return false;
+        }
       }
 
       // Filter Vị trí
-      if (filterViTri !== 'ALL' && r.vi_tri.trim() !== filterViTri) {
-        return false;
+      if (filterViTri !== 'ALL') {
+        const target = cleanStr(filterViTri);
+        const rViTri = cleanStr(r.vi_tri);
+        if (rViTri !== target) {
+          return false;
+        }
       }
 
       // Filter Khung Giờ
-      if (filterKhungH !== 'ALL' && r.khung_h.trim() !== filterKhungH) {
+      if (filterKhungH !== 'ALL' && cleanStr(r.khung_h) !== cleanStr(filterKhungH)) {
         return false;
       }
 
       // Filter Kết Quả
       if (filterKetQua !== 'ALL') {
-        const kq = (r.ket_qua || '').trim().toUpperCase();
-        if (kq !== filterKetQua) return false;
+        const kq = cleanStr(r.ket_qua);
+        if (kq !== cleanStr(filterKetQua)) return false;
       }
 
       return true;
     });
-  }, [dataRows, searchTerm, filterTenTu, filterViTri, filterKhungH, filterKetQua]);
+  }, [dataRows, searchTerm, filterTenTu, filterThang, filterViTri, filterKhungH, filterKetQua]);
 
-  // Checkbox toggle
+  // Checkbox toggle with guaranteed unique key
   const toggleSelectAll = () => {
     if (selectedIds.size === filteredRows.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(filteredRows.map((r) => r.id || r.rowIndex)));
+      setSelectedIds(
+        new Set(filteredRows.map((r) => r.uniqueId || `row_${r.rowIndex}_${r.id}`))
+      );
     }
   };
 
-  const toggleSelectRow = (id) => {
+  const toggleSelectRow = (uniqueKey) => {
     const next = new Set(selectedIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
+    if (next.has(uniqueKey)) next.delete(uniqueKey);
+    else next.add(uniqueKey);
     setSelectedIds(next);
   };
 
@@ -379,6 +445,18 @@ export default function DataModule({ onBack }) {
             <BarChart3 className="h-3.5 w-3.5" />
             <span>Thống kê</span>
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('chart')}
+            className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 font-bold transition-all ${
+              activeTab === 'chart'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-blue-600'
+            }`}
+          >
+            <LineChart className="h-3.5 w-3.5" />
+            <span>Biểu đồ</span>
+          </button>
         </div>
 
         <div className="text-xs font-semibold text-slate-500">
@@ -406,7 +484,7 @@ export default function DataModule({ onBack }) {
             </button>
 
             {/* Search Input */}
-            <div className="relative w-52 max-w-xs">
+            <div className="relative w-48 max-w-xs">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
@@ -417,23 +495,40 @@ export default function DataModule({ onBack }) {
               />
             </div>
 
-            {/* Filter 1: Lọc theo Tên Tủ */}
+            {/* Filter 1: Lọc theo Tên Tủ (rộng hơn để nhìn rõ tên model) */}
             <div className="relative">
               <select
                 value={filterTenTu}
                 onChange={(e) => setFilterTenTu(e.target.value)}
-                className="h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-700 focus:border-blue-500 focus:outline-none max-w-[170px] truncate"
+                className="h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-700 focus:border-blue-500 focus:outline-none max-w-[240px] truncate"
+                title={filterTenTu !== 'ALL' ? filterTenTu : 'Tên tủ: Tất cả'}
               >
                 <option value="ALL">Tên tủ: Tất cả</option>
                 {tenTuList.map((t) => (
-                  <option key={t} value={t}>
+                  <option key={t} value={t} title={t}>
                     {t}
                   </option>
                 ))}
               </select>
             </div>
 
-            {/* Filter 2: Vị trí */}
+            {/* Filter 2: Lọc theo Tháng (MM/YYYY) */}
+            <div className="relative">
+              <select
+                value={filterThang}
+                onChange={(e) => setFilterThang(e.target.value)}
+                className="h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-700 focus:border-blue-500 focus:outline-none"
+              >
+                <option value="ALL">Tháng: Tất cả</option>
+                {thangList.map((m) => (
+                  <option key={m} value={m}>
+                    Tháng {m}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filter 3: Vị trí */}
             <div className="relative">
               <select
                 value={filterViTri}
@@ -449,7 +544,7 @@ export default function DataModule({ onBack }) {
               </select>
             </div>
 
-            {/* Filter 3: Khung Giờ */}
+            {/* Filter 4: Khung Giờ */}
             <div className="relative">
               <select
                 value={filterKhungH}
@@ -465,7 +560,7 @@ export default function DataModule({ onBack }) {
               </select>
             </div>
 
-            {/* Filter 4: Trạng thái */}
+            {/* Filter 5: Trạng thái */}
             <div className="relative">
               <select
                 value={filterKetQua}
@@ -854,7 +949,7 @@ export default function DataModule({ onBack }) {
 
                 <tbody className="divide-y divide-slate-100 bg-white">
                   {filteredRows.map((r, i) => {
-                    const rowKey = r.id || r.rowIndex;
+                    const rowKey = r.uniqueId || `row_${r.rowIndex}_${r.id}`;
                     const isSelected = selectedIds.has(rowKey);
 
                     return (
@@ -1082,6 +1177,20 @@ export default function DataModule({ onBack }) {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Tab 3: Monthly Temperature Chart Module */}
+        {activeTab === 'chart' && (
+          <MonthlyChartModule
+            dataRows={dataRows}
+            activeCabinet={filterTenTu}
+            onSelectCabinet={(cab) => setFilterTenTu(cab)}
+            activeMonth={filterThang}
+            onSelectMonth={(m) => setFilterThang(m)}
+            tenTuList={tenTuList}
+            thangList={thangList}
+            onRefresh={loadData}
+          />
         )}
       </div>
 

@@ -169,6 +169,7 @@ export async function fetchDataRows() {
     .slice(1)
     .map((r, idx) => ({
       rowIndex: idx + 1,
+      uniqueId: `row_${idx + 1}_${r[0] || ''}`,
       id: r[0] || '',
       ngay: r[1] || '',
       ngay_h: r[2] || '',
@@ -189,6 +190,7 @@ export async function fetchDataRows() {
       chu_ky: r[17] || '',
       xac_nhan: r[18] || '',
       udt: r[19] || '',
+      nam_thang: r[21] || '',
     }))
     .reverse(); // Most recent first
 }
