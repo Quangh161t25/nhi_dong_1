@@ -145,6 +145,55 @@ export async function fetchCabinets() {
 }
 
 /**
+ * Fetch all records from DATA sheet
+ */
+export async function fetchDataRows() {
+  const token = await getAccessToken();
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.spreadsheetId}/values/DATA!A1:Z2000`;
+
+  const resp = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!resp.ok) {
+    throw new Error('Lỗi khi tải dữ liệu từ sheet DATA');
+  }
+
+  const data = await resp.json();
+  if (!data.values || data.values.length <= 1) {
+    return [];
+  }
+
+  // Row 0 is headers
+  return data.values
+    .slice(1)
+    .map((r, idx) => ({
+      rowIndex: idx + 1,
+      id: r[0] || '',
+      ngay: r[1] || '',
+      ngay_h: r[2] || '',
+      khung_h: r[3] || '',
+      qr_code: r[4] || '',
+      id_tu: r[5] || '',
+      ten: r[6] || '',
+      vi_tri: r[7] || '',
+      nhiet_do_min: r[8] || '',
+      nhiet_do_max: r[9] || '',
+      nhiet_do_do_dc: r[10] || '',
+      do_am_min: r[11] || '',
+      do_am_max: r[12] || '',
+      do_am_do_dc: r[13] || '',
+      ket_qua: (r[14] || '').toUpperCase(),
+      id_nv: r[15] || '',
+      ghi_chu: r[16] || '',
+      chu_ky: r[17] || '',
+      xac_nhan: r[18] || '',
+      udt: r[19] || '',
+    }))
+    .reverse(); // Most recent first
+}
+
+/**
  * Generate 8-character random ID
  */
 export function genRandomId() {
