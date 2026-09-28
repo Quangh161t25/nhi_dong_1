@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import LoginScreen from './components/LoginScreen';
+import Header from './components/Header';
 import ErpLayout from './components/ErpLayout';
 import ErpHome from './components/ErpHome';
 import DataModule from './components/DataModule';
@@ -16,13 +17,21 @@ export default function App() {
     }
   });
 
-  // Determine initial route from URL path
+  // Rule:
+  // Nếu KHÔNG CÓ path (/ hoặc rỗng) -> Mở Form nhập liệu
+  // Nếu CÓ /trang_chu -> Mở Trang chủ ERP (Ảnh 1)
+  // Nếu CÓ /data -> Mở Module DATA (Ảnh 2)
   const getInitialRoute = () => {
-    const path = window.location.pathname.toLowerCase();
-    if (path.includes('data')) return 'data';
-    if (path.includes('form')) return 'form';
-    // Default to 'trang_chu' for /trang_chu or root /
-    return 'trang_chu';
+    const rawPath = window.location.pathname.toLowerCase().replace(/\/+$/, '');
+    if (rawPath === '/trang_chu' || rawPath === '/trang-chu') return 'trang_chu';
+    if (rawPath === '/data') return 'data';
+    if (rawPath === '/tong-quan' || rawPath === '/tong_quan') return 'tong_quan';
+    if (rawPath === '/tai-chinh' || rawPath === '/tai_chinh') return 'tai_chinh';
+    if (rawPath === '/he-thong' || rawPath === '/he_thong') return 'he_thong';
+    if (rawPath === '/thong-tin-ban-quyen' || rawPath === '/ban_quyen') return 'ban_quyen';
+
+    // Mặc định không có /trang_chu: Form nhập liệu
+    return 'form';
   };
 
   const [activeRoute, setActiveRoute] = useState(getInitialRoute);
@@ -30,15 +39,16 @@ export default function App() {
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [dsTu, setDsTu] = useState([]);
 
-  // Sync route with URL history
+  // Sync route with URL bar
   const navigateTo = (route) => {
     setActiveRoute(route);
-    let targetPath = '/trang_chu';
-    if (route === 'data') targetPath = '/data';
-    else if (route === 'form') targetPath = '/form';
+    let targetPath = '/';
+    if (route === 'trang_chu') targetPath = '/trang_chu';
+    else if (route === 'data') targetPath = '/data';
+    else if (route === 'form') targetPath = '/';
     else if (route === 'tong_quan') targetPath = '/tong-quan';
     else if (route === 'tai_chinh') targetPath = '/tai-chinh';
-    else if (route === 'he_thong') targetPath = '/he-thong';
+    else if (route === 'he-thong') targetPath = '/he-thong';
     else if (route === 'ban_quyen') targetPath = '/thong-tin-ban-quyen';
 
     if (window.location.pathname !== targetPath) {
@@ -111,13 +121,11 @@ export default function App() {
     switch (activeRoute) {
       case 'data':
         return ['Dữ liệu nhiệt độ (DATA)'];
-      case 'form':
-        return ['Biểu mẫu ghi nhận'];
       case 'tong_quan':
         return ['Tổng quan'];
       case 'tai_chinh':
         return ['Tài chính'];
-      case 'he_thong':
+      case 'he-thong':
         return ['Hệ thống'];
       case 'ban_quyen':
         return ['Thông tin bản quyền'];
@@ -136,6 +144,23 @@ export default function App() {
     );
   }
 
+  // 1. Nếu KHÔNG CÓ path (/): Mở FORM GHI NHẬN NHIỆT ĐỘ
+  if (activeRoute === 'form') {
+    return (
+      <div className="flex flex-col min-h-screen">
+        <Header
+          currentUser={currentUser}
+          onLogout={handleLogout}
+          onNavigate={navigateTo}
+        />
+        <main className="flex-1 p-4 md:p-8">
+          <TemperatureForm dsTu={dsTu} currentUser={currentUser} />
+        </main>
+      </div>
+    );
+  }
+
+  // 2. Nếu CÓ /trang_chu hoặc /data hoặc phân hệ ERP: Mở giao diện ERP Layout
   return (
     <ErpLayout
       activeRoute={activeRoute}
@@ -158,21 +183,6 @@ export default function App() {
         />
       )}
 
-      {activeRoute === 'form' && (
-        <div className="mx-auto max-w-2xl">
-          <div className="mb-4 flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => navigateTo('data')}
-              className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1"
-            >
-              ← Xem toàn bộ bảng dữ liệu (Sheet DATA)
-            </button>
-          </div>
-          <TemperatureForm dsTu={dsTu} currentUser={currentUser} />
-        </div>
-      )}
-
       {['tong_quan', 'tai_chinh', 'he_thong', 'ban_quyen'].includes(
         activeRoute
       ) && (
@@ -184,8 +194,8 @@ export default function App() {
             Module {activeRoute.replace('_', ' ')}
           </h2>
           <p className="mt-2 text-xs text-slate-500">
-            Phân hệ đang trong quá trình kết nối dữ liệu. Bạn có thể sử dụng đầy đủ
-            chức năng tại phân hệ{' '}
+            Phân hệ đang trong quá trình đồng bộ. Bạn có thể sử dụng đầy đủ chức
+            năng tại phân hệ{' '}
             <button
               onClick={() => navigateTo('data')}
               className="font-bold text-blue-600 hover:underline"
@@ -194,10 +204,10 @@ export default function App() {
             </button>{' '}
             hoặc{' '}
             <button
-              onClick={() => navigateTo('trang_chu')}
-              className="font-bold text-blue-600 hover:underline"
+              onClick={() => navigateTo('form')}
+              className="font-bold text-teal-600 hover:underline"
             >
-              Trang chủ
+              Form ghi nhận nhiệt độ (/)
             </button>
             .
           </p>

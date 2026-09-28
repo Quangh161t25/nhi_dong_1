@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Activity, User, Settings, Key, LogOut } from 'lucide-react';
+import { Activity, User, Settings, Key, LogOut, House, Database } from 'lucide-react';
 
-export default function Header({ currentUser, onLogout }) {
+export default function Header({ currentUser, onLogout, onNavigate }) {
+
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -75,6 +76,32 @@ export default function Header({ currentUser, onLogout }) {
 
             <button
               type="button"
+              onClick={() => {
+                setDropdownOpen(false);
+                if (onNavigate) onNavigate('trang_chu');
+              }}
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-bold text-blue-600 transition hover:bg-blue-50"
+            >
+              <House className="h-4 w-4 text-blue-600" />
+              Trang chủ ERP (/trang_chu)
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setDropdownOpen(false);
+                if (onNavigate) onNavigate('data');
+              }}
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-bold text-teal-700 transition hover:bg-teal-50"
+            >
+              <Database className="h-4 w-4 text-teal-600" />
+              Xem bảng Dữ liệu (/data)
+            </button>
+
+            <div className="my-1 border-t border-slate-100" />
+
+            <button
+              type="button"
               className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-teal-50 hover:text-teal-900"
             >
               <User className="h-4 w-4 text-slate-400" />
@@ -98,6 +125,7 @@ export default function Header({ currentUser, onLogout }) {
             </button>
 
             <div className="my-1 border-t border-slate-100" />
+
 
             <button
               type="button"
