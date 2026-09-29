@@ -63,10 +63,10 @@ export default function ErpLayout({
   const userRole = currentUser?.role || 'Tổng Giám Đốc';
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-slate-50 font-sans text-slate-900">
+    <div className="flex h-screen w-full overflow-hidden bg-slate-50 font-sans text-slate-900 erp-layout-root">
       {/* Sidebar */}
       <aside
-        className={`relative z-40 flex flex-col border-r border-slate-200 bg-white transition-all duration-300 ${
+        className={`no-print relative z-40 flex flex-col border-r border-slate-200 bg-white transition-all duration-300 ${
           isSidebarCollapsed ? 'w-18' : 'w-64'
         }`}
       >
@@ -145,9 +145,9 @@ export default function ErpLayout({
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden erp-layout-main">
         {/* Top Header */}
-        <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 md:px-6">
+        <header className="no-print sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 md:px-6">
           <div className="flex items-center gap-3">
             <button
               type="button"

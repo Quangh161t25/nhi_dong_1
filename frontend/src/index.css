@@ -121,3 +121,114 @@
     padding-bottom: 5.5rem;
   }
 }
+
+/* =========================================================
+   Standard A4 Landscape Print Styling: Phiếu Biểu Đồ & Bảo Trì
+   ========================================================= */
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 4mm 5mm;
+  }
+
+  html,
+  body {
+    width: 297mm !important;
+    height: auto !important;
+    min-height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Break out of all overflow constraints, flex stretching, and fixed viewports */
+  #root,
+  #root > div,
+  main,
+  .erp-layout-root,
+  .erp-layout-main,
+  .data-module-card,
+  .monthly-chart-root,
+  .h-screen,
+  .min-h-screen,
+  .overflow-auto,
+  .overflow-y-auto,
+  .flex-1 {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    position: static !important;
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+
+  /* Ensure chart container strictly maintains its relative positioning for SVG coordinate origin */
+  .chart-wrap-container {
+    position: relative !important;
+    overflow: hidden !important;
+    width: 100% !important;
+    display: block !important;
+  }
+
+  .chart-wrap-container > svg {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    pointer-events: none !important;
+    z-index: 10 !important;
+  }
+
+  .sheet-dot,
+  svg polyline {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Strictly hide all web navigation, sidebars, headers, controls, and buttons */
+  aside,
+  header,
+  nav,
+  .no-print,
+  button,
+  input,
+  select,
+  .no-print-area {
+    display: none !important;
+  }
+
+  /* Hospital Standard A4 Sheet Page */
+  .hospital-sheet-page {
+    width: 285mm !important;
+    max-width: 285mm !important;
+    min-height: 198mm !important;
+    margin: 0 auto !important;
+    padding: 2.5mm 3.5mm !important;
+    border: 1px solid #64748b !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    box-sizing: border-box !important;
+    overflow: visible !important;
+  }
+
+  .hospital-sheet-page:last-child {
+    page-break-after: auto !important;
+    break-after: auto !important;
+  }
+}
+

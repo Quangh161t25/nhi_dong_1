@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   AlertTriangle,
 } from 'lucide-react';
+import { isSpecialSchedule } from './KhungGioSelector';
 
 /**
  * Clean equipment model name for maintenance title
@@ -34,136 +35,347 @@ function cleanDeviceName(raw) {
  * Determine equipment specifications based on the 18 standardized hospital .html templates
  */
 export function getEquipmentSpecs(cabinetName, dataRows = []) {
-  const norm = String(cabinetName || '')
-    .toLowerCase()
-    .normalize('NFC')
-    .trim();
+  const cleanStr = (s) =>
+    String(s || '')
+      .toLowerCase()
+      .normalize('NFC')
+      .trim();
 
-  // 1. Room with Humidity (Dual-scale: Temperature 15-32°C, Humidity 15-100%)
-  const isRoom =
-    norm.includes('phòng') ||
-    norm.includes('độ ẩm') ||
-    norm.includes('nhận mẫu') ||
-    norm.includes('đông máu') ||
-    norm.includes('ngân hàng máu');
+  const removeAccents = (s) =>
+    String(s || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/đ/g, 'd')
+      .trim();
 
-  if (isRoom) {
-    let title = 'PHIẾU THEO DÕI NHIỆT ĐỘ VÀ ẨM ĐỘ';
-    let roomType = 'Phòng';
-    let deviceCode = 'HE-sp-003';
-    if (norm.includes('nhận mẫu')) {
-      title += ' PHÒNG NHẬN MẪU';
-      roomType = 'Phòng nhận mẫu';
-      deviceCode = 'HE-sp-003';
-    } else if (norm.includes('đông máu') || norm.includes('tế bào')) {
-      title += ' PHÒNG ĐÔNG MÁU - TẾ BÀO';
-      roomType = 'Phòng đông máu - Tế bào';
-      deviceCode = 'HE-sp-002';
-    } else if (norm.includes('ngân hàng máu')) {
-      title += ' PHÒNG NGÂN HÀNG MÁU';
-      roomType = 'Phòng ngân hàng máu';
-      deviceCode = 'HE-sp-001';
-    } else {
-      title += ` ${cabinetName.toUpperCase()}`;
-    }
+  const norm = cleanStr(cabinetName);
+  const normNoAccents = removeAccents(cabinetName);
 
-    return {
+  const SPEC_DICTIONARY = [
+    // 1. Rooms with humidity (dual-scale)
+    {
       type: 'ROOM_DUAL',
-      title,
-      roomType,
-      code: 'FM-EQ-HE-004 V4.0',
+      match: ['nhận mẫu'],
+      title: 'PHIẾU THEO DÕI NHIỆT ĐỘ VÀ ẨM ĐỘ PHÒNG NHẬN MẪU',
       standardTemp: '21 - 26°C',
       standardHumidity: '≤ 70%',
-      deviceCode,
+      deviceCode: 'HE-sp-003',
       managerCode: 'TAN006',
       tempScale: [32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15],
       humScale: [100, 95, 90, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30, 25, 20, 15],
-      tempMin: 21,
-      tempMax: 26,
-      humMax: 70,
-    };
-  }
-
-  // 2. Bể điều nhiệt Memmert WTB35 (37°C & 56°C)
-  if (norm.includes('memmert') || norm.includes('bể điều nhiệt') || norm.includes('wtb35')) {
-    return {
+      code: 'FM-EQ-HE-004 V4.0',
+    },
+    {
+      type: 'ROOM_DUAL',
+      match: ['đông máu - tế bào', 'đông máu'],
+      title: 'PHIẾU THEO DÕI NHIỆT ĐỘ VÀ ẨM ĐỘ PHÒNG ĐÔNG MÁU - TẾ BÀO',
+      standardTemp: '21 - 26°C',
+      standardHumidity: '≤ 70%',
+      deviceCode: 'HE-sp-002',
+      managerCode: 'TAN006',
+      tempScale: [32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15],
+      humScale: [100, 95, 90, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30, 25, 20, 15],
+      code: 'FM-EQ-HE-004 V4.0',
+    },
+    {
+      type: 'ROOM_DUAL',
+      match: ['ngân hàng máu'],
+      title: 'PHIẾU THEO DÕI NHIỆT ĐỘ VÀ ẨM ĐỘ PHÒNG NGÂN HÀNG MÁU',
+      standardTemp: '21 - 26°C',
+      standardHumidity: '≤ 70%',
+      deviceCode: 'HE-cm-024',
+      managerCode: 'TAN006',
+      tempScale: [32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15],
+      humScale: [100, 95, 90, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30, 25, 20, 15],
+      code: 'FM-EQ-HE-004 V4.0',
+    },
+    // 2. Memmert WTB35 (37°C & 56°C)
+    {
       type: 'MEMMERT',
+      match: ['memmert', 'wtb35', 'bể điều nhiệt'],
       title: 'PHIẾU THEO DÕI NHIỆT ĐỘ BỂ ĐIỀU NHIỆT MEMMERT WTB35',
       code: 'FM-EQ-HE-003 V4.0',
       standardTemp: '37°C & 56°C',
-      deviceCode: 'HE-tb-015',
+      deviceCode: 'HE-cm-064',
       managerCode: 'LIB001',
       temps: [57, 56, 55, 'sep', 38, 37, 36],
       highlightTemps: [56, 37],
-    };
-  }
-
-  // 3. Tủ âm sâu PHCBi (-80°C ~ -70°C)
-  if (norm.includes('âm sâu') || (norm.includes('phcbi') && (norm.includes('80') || norm.includes('70')))) {
-    return {
+    },
+    // 3. Deep freezer (-80°C ~ -70°C)
+    {
       type: 'CABINET',
+      match: ['âm sâu'],
       title: 'PHIẾU THEO DÕI NHIỆT ĐỘ TỦ ÂM SÂU (-80°C ~ -70°C)',
       code: 'FM-EQ-HE-003 V4.0',
       standardTemp: '-80°C ~ -70°C',
-      deviceCode: 'HE-bb-014',
+      deviceCode: 'HE-cm-048',
       managerCode: 'LIB001',
       temps: [-70, -71, -72, -73, -74, -75, -76, -77, -78, -79, -80, -81, -82, -83, -84, -85],
       highlightTemps: [-70, -80],
-    };
-  }
-
-  // 4. Tủ đông trữ chế phẩm máu (-30°C ~ -35°C) (KW, Panasonic MDF-137, Thermo Scientific)
-  if (norm.includes('tủ đông') || norm.includes('kw') || norm.includes('mdf-137') || norm.includes('-30')) {
-    return {
-      type: 'CABINET',
-      title: 'PHIẾU THEO DÕI NHIỆT ĐỘ TỦ ĐÔNG TRỮ CHẾ PHẨM MÁU (-30°C ~ -35°C)',
+    },
+    // 4. Platelet incubator HELMER PC100i
+    {
+      type: 'CABINET_6_SLOTS',
+      slotsPerDay: 6,
+      match: ['tiểu cầu', 'tieu cau', 'helmer', 'pc100i', 'pc-100i', 'pc 100i'],
+      title: 'PHIẾU THEO DÕI NHIỆT ĐỘ MÁY LẮC TIỂU CẦU',
+      code: 'FM-EQ-HE-003 V4.0',
+      deviceCode: 'HE-bb-005',
+      managerCode: 'LIB001',
+      standardTemp: '20°C ~ 24°C',
+      temps: [25, 24, 23, 22, 21, 20, 19],
+      highlightTemps: [20, 24],
+      dynamicSpecs: (dataRows) => {
+        const rows = dataRows.filter(
+          (r) => cleanStr(r.ten).includes('tiểu cầu') || cleanStr(r.ten).includes('helmer')
+        );
+        const hasNegative = rows.some((r) => Number(r.nhiet_do_do_dc) <= -10);
+        if (hasNegative) {
+          return {
+            type: 'CABINET_6_SLOTS',
+            slotsPerDay: 6,
+            standardTemp: '-30°C ~ -35°C',
+            temps: [-30, -31, -32, -33, -34, -35, -36],
+            highlightTemps: [-30, -35],
+          };
+        }
+        return {
+          type: 'CABINET_6_SLOTS',
+          slotsPerDay: 6,
+          standardTemp: '20°C ~ 24°C',
+          temps: [25, 24, 23, 22, 21, 20, 19],
+          highlightTemps: [20, 24],
+        };
+      },
+    },
+    // 5. Blood freezers (-30°C ~ -35°C) - 6 shifts/day
+    {
+      type: 'CABINET_6_SLOTS',
+      slotsPerDay: 6,
+      match: ['kw'],
+      title: 'PHIẾU THEO DÕI NHIỆT ĐỘ TỦ ÂM TRỮ HUYẾT TƯƠNG, TỦA LẠNH -35°C',
       code: 'FM-EQ-HE-003 V4.0',
       standardTemp: '-30°C ~ -35°C',
-      deviceCode: 'HE-bb-005',
+      deviceCode: 'HE-bb-004',
       managerCode: 'LIB001',
       temps: [-30, -31, -32, -33, -34, -35, -36],
       highlightTemps: [-30, -35],
-    };
-  }
-
-  // 5. Máy ủ lắc tiểu cầu HELMER PC100i (20°C ~ 24°C)
-  if (norm.includes('tiểu cầu') || norm.includes('helmer') || norm.includes('pc100i')) {
-    return {
-      type: 'CABINET',
-      title: 'PHIẾU THEO DÕI NHIỆT ĐỘ MÁY Ủ LẮC TIỂU CẦU 20-24°C',
+    },
+    {
+      type: 'CABINET_6_SLOTS',
+      slotsPerDay: 6,
+      match: ['mdf-137', 'mdf 137', 'mdf'],
+      title: 'PHIẾU THEO DÕI NHIỆT ĐỘ TỦ ÂM TRỮ HUYẾT TƯƠNG, TỦA LẠNH -35°C',
       code: 'FM-EQ-HE-003 V4.0',
-      standardTemp: '20°C ~ 24°C',
-      deviceCode: 'HE-bb-008',
+      standardTemp: '-30°C ~ -35°C',
+      deviceCode: 'HE-bb-026',
+      managerCode: 'NHN028',
+      temps: [-30, -31, -32, -33, -34, -35, -36],
+      highlightTemps: [-30, -35],
+    },
+    {
+      type: 'CABINET_6_SLOTS',
+      slotsPerDay: 6,
+      match: [
+        'tủ đông trữ chế phẩm máu thermo scientific',
+        'tu dong tru che pham mau thermo scientific',
+        'tủ đông thermo',
+        'tu dong thermo',
+        'tủ đông',
+        'tu dong',
+        'tủa lạnh',
+        'tua lanh',
+        'huyết tương',
+        'huyet tuong',
+      ],
+      title: 'PHIẾU THEO DÕI NHIỆT ĐỘ TỦ ÂM TRỮ HUYẾT TƯƠNG, TỦA LẠNH -35°C',
+      code: 'FM-EQ-HE-003 V4.0',
+      standardTemp: '-30°C ~ -35°C',
+      deviceCode: 'HE-bb-027',
+      thermometerCode: 'HE-bb-014',
       managerCode: 'LIB001',
-      temps: [25, 24, 23, 22, 21, 20, 19],
-      highlightTemps: [20, 24],
-    };
-  }
-
-  // 6. Tủ lạnh trữ máu 2-6°C (Fiochetti, PHCBi-A, PHCBi-B)
-  if (norm.includes('fiochetti') || norm.includes('phcbi-a') || norm.includes('phcbi-b')) {
-    return {
+      temps: [-30, -31, -32, -33, -34, -35, -36],
+      highlightTemps: [-30, -35],
+    },
+    // 6. Blood Refrigerators 2-6°C
+    {
       type: 'CABINET',
+      match: ['dometic br320-a', 'br320-a', 'br320 a'],
       title: 'PHIẾU THEO DÕI NHIỆT ĐỘ TỦ LẠNH TRỮ MÁU 2-6°C',
       code: 'FM-EQ-HE-003 V4.0',
       standardTemp: '2°C ~ 6°C',
       deviceCode: 'HE-bb-002',
       managerCode: 'LIB001',
+      temps: [8, 7, 6, 5, 4, 3, 2],
+      highlightTemps: [2, 6],
+    },
+    {
+      type: 'CABINET_6_SLOTS',
+      slotsPerDay: 6,
+      match: ['fiochetti', 'eumotica'],
+      title: 'PHIẾU THEO DÕI NHIỆT ĐỘ TỦ LẠNH TRỮ HỒNG CẦU 2-6°C',
+      code: 'FM-EQ-HE-003 V4.0',
+      standardTemp: '2°C ~ 6°C',
+      deviceCode: 'HE-bb-003',
+      managerCode: 'LIB001',
       temps: [6, 5, 4, 3, 2, 1],
       highlightTemps: [2, 6],
+    },
+    {
+      type: 'CABINET_6_SLOTS',
+      slotsPerDay: 6,
+      match: ['phcbi-a', 'phcbi a', 'phcbi_a'],
+      title: 'PHIẾU THEO DÕI NHIỆT ĐỘ TỦ LẠNH TRỮ HỒNG CẦU 2-6°C',
+      code: 'FM-EQ-HE-003 V4.0',
+      standardTemp: '2°C ~ 6°C',
+      deviceCode: 'HE-bb-040',
+      managerCode: 'LIB001',
+      temps: [6, 5, 4, 3, 2, 1],
+      highlightTemps: [2, 6],
+    },
+    {
+      type: 'CABINET_6_SLOTS',
+      slotsPerDay: 6,
+      match: ['phcbi-b', 'phcbi b', 'phcbi_b'],
+      title: 'PHIẾU THEO DÕI NHIỆT ĐỘ TỦ LẠNH TRỮ HỒNG CẦU 2-6°C',
+      code: 'FM-EQ-HE-003 V4.0',
+      standardTemp: '2°C ~ 6°C',
+      deviceCode: 'HE-bb-041',
+      managerCode: 'LIB001',
+      temps: [6, 5, 4, 3, 2, 1],
+      highlightTemps: [2, 6],
+    },
+    // 7. Chemical & Sample Refrigerators 2-8°C
+    {
+      type: 'CABINET',
+      match: ['sanyo', 'mbr-304d', 'mbr 304d', 'mbr'],
+      title: 'PHIẾU THEO DÕI NHIỆT ĐỘ TỦ LẠNH TRỮ HÓA CHẤT 2-8°C',
+      code: 'FM-EQ-HE-003 V4.0',
+      standardTemp: '2°C ~ 8°C',
+      deviceCode: 'HE-cm-008',
+      managerCode: 'NHN028',
+      temps: [8, 7, 6, 5, 4, 3, 2],
+      highlightTemps: [2, 8],
+    },
+    {
+      type: 'CABINET',
+      match: ['panasonic'],
+      title: 'PHIẾU THEO DÕI NHIỆT ĐỘ TỦ LẠNH TRỮ HÓA CHẤT 2-8°C',
+      code: 'FM-EQ-HE-003 V4.0',
+      standardTemp: '2°C ~ 8°C',
+      deviceCode: 'HE-bb-028',
+      managerCode: 'NHN028',
+      temps: [8, 7, 6, 5, 4, 3, 2],
+      highlightTemps: [2, 8],
+    },
+    {
+      type: 'CABINET',
+      match: [
+        'tủ lạnh trữ hóa chất thermo scientific',
+        'tu lanh tru hoa chat thermo scientific',
+        'hóa chất thermo',
+        'hoa chat thermo',
+        'thermo',
+      ],
+      title: 'PHIẾU THEO DÕI NHIỆT ĐỘ TỦ LẠNH TRỮ HÓA CHẤT 2-8°C',
+      code: 'FM-EQ-HE-003 V4.0',
+      standardTemp: '2°C ~ 8°C',
+      deviceCode: 'HE-cm-009',
+      managerCode: 'NHN028',
+      temps: [8, 7, 6, 5, 4, 3, 2],
+      highlightTemps: [2, 8],
+    },
+    {
+      type: 'CABINET',
+      match: [
+        'tủ lạnh trữ hóa chất phcbi',
+        'tu lanh tru hoa chat phcbi',
+        'hóa chất phcbi',
+        'hoa chat phcbi',
+        'phcbi',
+      ],
+      title: 'PHIẾU THEO DÕI NHIỆT ĐỘ TỦ LẠNH TRỮ HÓA CHẤT 2-8°C',
+      code: 'FM-EQ-HE-003 V4.0',
+      standardTemp: '2°C ~ 8°C',
+      deviceCode: 'HE-cm-049',
+      managerCode: 'NHN028',
+      temps: [8, 7, 6, 5, 4, 3, 2],
+      highlightTemps: [2, 8],
+    },
+    {
+      type: 'CABINET',
+      match: ['dometic br320-b', 'br320-b', 'br320 b'],
+      title: 'PHIẾU THEO DÕI NHIỆT ĐỘ TỦ LẠNH TRỮ HÓA CHẤT 2-8°C',
+      code: 'FM-EQ-HE-003 V4.0',
+      standardTemp: '2°C ~ 8°C',
+      deviceCode: 'HE-cm-014',
+      managerCode: 'NHN028',
+      temps: [8, 7, 6, 5, 4, 3, 2],
+      highlightTemps: [2, 8],
+    },
+  ];
+
+  const matched = SPEC_DICTIONARY.find((item) =>
+    item.match.some((m) => {
+      const cleanM = cleanStr(m);
+      const noAccM = removeAccents(m);
+      return norm.includes(cleanM) || normNoAccents.includes(noAccM);
+    })
+  );
+
+  // Cross-check with isSpecialSchedule and measurement records: guarantee 6 slots
+  const has6SlotsData = dataRows.some((r) => {
+    const matchTu =
+      cleanStr(r.ten) === norm ||
+      cleanStr(r.id_tu) === norm ||
+      removeAccents(r.ten) === normNoAccents ||
+      removeAccents(r.id_tu) === normNoAccents;
+    return matchTu && /^L[1-6]/i.test((r.khung_h || '').trim());
+  });
+
+  const force6Slots = isSpecialSchedule(cabinetName) || has6SlotsData;
+
+  if (matched) {
+    const dyn = matched.dynamicSpecs ? matched.dynamicSpecs(dataRows) : {};
+    const slots = force6Slots ? 6 : dyn.slotsPerDay || matched.slotsPerDay || 2;
+    const type = slots === 6 ? 'CABINET_6_SLOTS' : dyn.type || matched.type || 'CABINET';
+
+    return {
+      type,
+      slotsPerDay: slots,
+      title: matched.title,
+      code: matched.code || 'FM-EQ-HE-003 V4.0',
+      standardTemp: dyn.standardTemp || matched.standardTemp,
+      standardHumidity: matched.standardHumidity,
+      deviceCode: matched.deviceCode,
+      thermometerCode: matched.thermometerCode,
+      managerCode: matched.managerCode,
+      temps:
+        dyn.temps ||
+        matched.temps ||
+        (slots === 6 ? [-30, -31, -32, -33, -34, -35, -36] : [8, 7, 6, 5, 4, 3, 2]),
+      tempScale: matched.tempScale,
+      humScale: matched.humScale,
+      highlightTemps:
+        dyn.highlightTemps ||
+        matched.highlightTemps ||
+        (slots === 6 ? [-30, -35] : [2, 8]),
     };
   }
 
-  // 7. Tủ lạnh trữ hóa chất / lưu mẫu 2-8°C (Dometic BR320, Sanyo, Panasonic, etc.)
+  // Fallback for custom or unknown cabinet
+  const fallbackSlots = force6Slots ? 6 : 2;
   return {
-    type: 'CABINET',
-    title: 'PHIẾU THEO DÕI NHIỆT ĐỘ TỦ LẠNH TRỮ HÓA CHẤT 2-8°C',
+    type: fallbackSlots === 6 ? 'CABINET_6_SLOTS' : 'CABINET',
+    slotsPerDay: fallbackSlots,
+    title: `PHIẾU THEO DÕI NHIỆT ĐỘ ${cabinetName.toUpperCase()}`,
     code: 'FM-EQ-HE-003 V4.0',
-    standardTemp: '2°C ~ 8°C',
-    deviceCode: 'HE-bb-001',
+    standardTemp: fallbackSlots === 6 ? '-30°C ~ -35°C' : '2°C ~ 8°C',
+    deviceCode: 'HE-tb-001',
     managerCode: 'LIB001',
-    temps: [8, 7, 6, 5, 4, 3, 2],
-    highlightTemps: [2, 8],
+    temps: fallbackSlots === 6 ? [-30, -31, -32, -33, -34, -35, -36] : [8, 7, 6, 5, 4, 3, 2],
+    highlightTemps: fallbackSlots === 6 ? [-30, -35] : [2, 8],
   };
 }
 
@@ -307,13 +519,26 @@ export default function MonthlyChartModule({
       }
       if (!day || isNaN(day) || day < 1 || day > 31) return;
 
-      const session = (r.khung_h || '')
-        .trim()
-        .toLowerCase()
-        .startsWith('c')
-        ? 'C'
-        : 'S';
       if (!map[day]) map[day] = {};
+
+      const rawSession = (r.khung_h || '').trim().toUpperCase();
+      let session = 'S';
+      let slot = null;
+
+      const lMatch = rawSession.match(/^L([1-6])/i);
+      if (lMatch) {
+        slot = parseInt(lMatch[1], 10);
+        session = slot <= 2 ? 'S' : 'C';
+      } else if (rawSession.startsWith('C') || rawSession === 'CHIỀU') {
+        session = 'C';
+        slot = 3;
+      } else if (rawSession.startsWith('S') || rawSession === 'SÁNG') {
+        session = 'S';
+        slot = 1;
+      } else {
+        session = map[day]['S'] ? 'C' : 'S';
+        slot = map[day][1] ? 2 : 1;
+      }
 
       const temp =
         r.nhiet_do_do_dc !== '' && !isNaN(Number(r.nhiet_do_do_dc))
@@ -323,18 +548,28 @@ export default function MonthlyChartModule({
         r.do_am_do_dc !== '' && !isNaN(Number(r.do_am_do_dc))
           ? Number(r.do_am_do_dc)
           : null;
+      const staffId = (r.id_nv || '').trim().toUpperCase();
       const staffName = getStaffDisplayName
         ? getStaffDisplayName(r.id_nv)
-        : r.id_nv || '';
+        : staffId;
 
-      map[day][session] = {
+      const entry = {
         temp,
         hum,
-        sign: staffName,
-        id_nv: r.id_nv,
+        sign: staffId, // User requested: Tên để là ID
+        staffId,
+        staffName,
+        id_nv: staffId,
         ket_qua: r.ket_qua,
         raw: r,
       };
+
+      if (session) {
+        map[day][session] = entry;
+      }
+      if (slot) {
+        map[day][slot] = entry;
+      }
     });
     return map;
   }, [chartRows, getStaffDisplayName]);
@@ -354,12 +589,25 @@ export default function MonthlyChartModule({
       if (!day || isNaN(day) || day < 1 || day > 31) return;
 
       // In Image 2, the user's template shows the staff code (e.g. THB010)
-      if (!map[day]) {
-        map[day] = r.id_nv || 'THB010';
+      if (!map[day] && r.id_nv) {
+        map[day] = String(r.id_nv).trim().toUpperCase();
       }
     });
     return map;
   }, [chartRows]);
+
+  // Handler for printing standard A4 hospital sheets
+  const handlePrintA4 = () => {
+    if (viewMode !== 'hospitalSheet') {
+      setViewMode('hospitalSheet');
+    }
+    requestAnimationFrame(() => {
+      window.dispatchEvent(new Event('beforeprint'));
+      requestAnimationFrame(() => {
+        window.print();
+      });
+    });
+  };
 
   // Extract month and year parts for header
   const [monthPart, yearPart] = useMemo(() => {
@@ -370,8 +618,15 @@ export default function MonthlyChartModule({
     return ['05', '2026'];
   }, [resolvedMonth]);
 
+  const totalDaysInMonth = useMemo(() => {
+    const m = parseInt(monthPart, 10);
+    const y = parseInt(yearPart, 10);
+    if (!m || !y) return 30;
+    return new Date(y, m, 0).getDate();
+  }, [monthPart, yearPart]);
+
   return (
-    <div className="flex flex-1 flex-col overflow-auto bg-slate-100/70 p-4 space-y-4">
+    <div className="flex flex-1 flex-col overflow-auto bg-slate-100/70 p-4 space-y-4 monthly-chart-root">
       {/* Top Header Card (Controls) */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs no-print">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -484,9 +739,9 @@ export default function MonthlyChartModule({
             {/* Print Button */}
             <button
               type="button"
-              onClick={() => window.print()}
+              onClick={handlePrintA4}
               title="In phiếu A4 Landscape (Trang 1, Trang 2 & Phiếu bảo trì)"
-              className="flex h-8 items-center gap-1.5 rounded-xl border border-blue-600 bg-blue-600 px-3 text-xs font-bold text-white hover:bg-blue-700 active:scale-95 transition shadow-xs"
+              className="flex h-8 items-center gap-1.5 rounded-xl border border-blue-600 bg-blue-600 px-3 text-xs font-bold text-white hover:bg-blue-700 active:scale-95 transition shadow-xs cursor-pointer"
             >
               <Printer className="h-3.5 w-3.5" />
               <span>In phiếu (A4)</span>
@@ -520,7 +775,65 @@ export default function MonthlyChartModule({
               >
                 Xem tất cả các trang
               </button>
-              {specs.type !== 'ROOM_DUAL' && (
+              {specs.slotsPerDay === 6 ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSheetTab('p1')}
+                    className={`rounded-lg px-2.5 py-1 font-bold transition ${
+                      activeSheetTab === 'p1'
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    Trang 1 (1 - 7)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSheetTab('p2')}
+                    className={`rounded-lg px-2.5 py-1 font-bold transition ${
+                      activeSheetTab === 'p2'
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    Trang 2 (8 - 14)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSheetTab('p3')}
+                    className={`rounded-lg px-2.5 py-1 font-bold transition ${
+                      activeSheetTab === 'p3'
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    Trang 3 (15 - 21)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSheetTab('p4')}
+                    className={`rounded-lg px-2.5 py-1 font-bold transition ${
+                      activeSheetTab === 'p4'
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    Trang 4 (22 - 28)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSheetTab('p5')}
+                    className={`rounded-lg px-2.5 py-1 font-bold transition ${
+                      activeSheetTab === 'p5'
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    Trang 5 (29 - {totalDaysInMonth})
+                  </button>
+                </>
+              ) : specs.type !== 'ROOM_DUAL' ? (
                 <>
                   <button
                     type="button"
@@ -545,7 +858,7 @@ export default function MonthlyChartModule({
                     Trang 2 (Ngày 16 - 31)
                   </button>
                 </>
-              )}
+              ) : null}
               <button
                 type="button"
                 onClick={() => setActiveSheetTab('maintenance')}
@@ -592,8 +905,102 @@ export default function MonthlyChartModule({
                 />
               )}
             </>
+          ) : specs.slotsPerDay === 6 ? (
+            /* 6-shift cabinets (7 days/page, 6 slots/day) */
+            <>
+              {/* Page 1: 1 - 7 */}
+              {(activeSheetTab === 'all' || activeSheetTab === 'p1') && (
+                <HospitalWeeklyTable
+                  specs={specs}
+                  cabinetName={resolvedCabinet}
+                  month={monthPart}
+                  year={yearPart}
+                  pageIndex={1}
+                  startDay={1}
+                  endDay={7}
+                  temps={specs.temps || [6, 5, 4, 3, 2, 1]}
+                  highlightTemps={specs.highlightTemps || [2, 6]}
+                  dataMap={monthDataMap}
+                />
+              )}
+
+              {/* Page 2: 8 - 14 */}
+              {(activeSheetTab === 'all' || activeSheetTab === 'p2') && (
+                <HospitalWeeklyTable
+                  specs={specs}
+                  cabinetName={resolvedCabinet}
+                  month={monthPart}
+                  year={yearPart}
+                  pageIndex={2}
+                  startDay={8}
+                  endDay={14}
+                  temps={specs.temps || [6, 5, 4, 3, 2, 1]}
+                  highlightTemps={specs.highlightTemps || [2, 6]}
+                  dataMap={monthDataMap}
+                />
+              )}
+
+              {/* Page 3: 15 - 21 */}
+              {(activeSheetTab === 'all' || activeSheetTab === 'p3') && (
+                <HospitalWeeklyTable
+                  specs={specs}
+                  cabinetName={resolvedCabinet}
+                  month={monthPart}
+                  year={yearPart}
+                  pageIndex={3}
+                  startDay={15}
+                  endDay={21}
+                  temps={specs.temps || [6, 5, 4, 3, 2, 1]}
+                  highlightTemps={specs.highlightTemps || [2, 6]}
+                  dataMap={monthDataMap}
+                />
+              )}
+
+              {/* Page 4: 22 - 28 */}
+              {(activeSheetTab === 'all' || activeSheetTab === 'p4') && (
+                <HospitalWeeklyTable
+                  specs={specs}
+                  cabinetName={resolvedCabinet}
+                  month={monthPart}
+                  year={yearPart}
+                  pageIndex={4}
+                  startDay={22}
+                  endDay={28}
+                  temps={specs.temps || [6, 5, 4, 3, 2, 1]}
+                  highlightTemps={specs.highlightTemps || [2, 6]}
+                  dataMap={monthDataMap}
+                />
+              )}
+
+              {/* Page 5: 29 - totalDaysInMonth */}
+              {(activeSheetTab === 'all' || activeSheetTab === 'p5') && (
+                <HospitalWeeklyTable
+                  specs={specs}
+                  cabinetName={resolvedCabinet}
+                  month={monthPart}
+                  year={yearPart}
+                  pageIndex={5}
+                  startDay={29}
+                  endDay={totalDaysInMonth}
+                  temps={specs.temps || [6, 5, 4, 3, 2, 1]}
+                  highlightTemps={specs.highlightTemps || [2, 6]}
+                  dataMap={monthDataMap}
+                />
+              )}
+
+              {/* Maintenance Sheet */}
+              {(activeSheetTab === 'all' || activeSheetTab === 'maintenance') && (
+                <HospitalMaintenanceSheet
+                  specs={specs}
+                  cabinetName={resolvedCabinet}
+                  month={monthPart}
+                  year={yearPart}
+                  operators={operators}
+                />
+              )}
+            </>
           ) : (
-            /* Cabinet / Refrigerator / Memmert / Freezer */
+            /* Cabinet / Refrigerator / Memmert / Freezer (2 sessions S / C) */
             <>
               {/* Sheet 1: Days 1 to 15 */}
               {(activeSheetTab === 'all' || activeSheetTab === 'p1') && (
@@ -656,32 +1063,496 @@ export default function MonthlyChartModule({
         @media print {
           @page {
             size: A4 landscape;
-            margin: 5mm 6mm;
+            margin: 4mm 5mm;
           }
           body, html {
+            width: 297mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
             background: #fff !important;
             color: #000 !important;
+            overflow: visible !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
-          .no-print {
+          .no-print, aside, header, nav {
             display: none !important;
           }
+          .erp-layout-root,
+          .erp-layout-main,
+          .data-module-card,
+          .monthly-chart-root {
+            height: auto !important;
+            min-height: 0 !important;
+            max-height: none !important;
+            overflow: visible !important;
+            position: static !important;
+            display: block !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            background: transparent !important;
+          }
           .hospital-sheet-page {
-            width: 287mm !important;
-            max-width: 287mm !important;
+            width: 285mm !important;
+            max-width: 285mm !important;
+            min-height: 198mm !important;
             margin: 0 auto !important;
             box-shadow: none !important;
             border-radius: 0 !important;
-            padding: 2mm !important;
+            border: 1px solid #64748b !important;
+            padding: 2.5mm 3.5mm !important;
             page-break-after: always !important;
             break-after: page !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            box-sizing: border-box !important;
             background: #fff !important;
+            overflow: visible !important;
           }
           .hospital-sheet-page:last-child {
             page-break-after: auto !important;
             break-after: auto !important;
           }
+          .chart-wrap-container {
+            position: relative !important;
+            overflow: hidden !important;
+            width: 100% !important;
+            display: block !important;
+          }
+          .chart-wrap-container > svg {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            pointer-events: none !important;
+            z-index: 10 !important;
+          }
+          svg polyline {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .sheet-dot {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
         }
       `}</style>
+    </div>
+  );
+}
+
+/**
+ * Component: Hospital Weekly Table (Phiếu 6 ca / ngày: 7 ngày / trang, 6 ca L1..L6 / ngày)
+ * Dành cho 7 tủ: Fiochetti, PHCBi-A, PHCBi-B, KW, Panasonic MDF-137, Thermo Scientific, HELMER PC100i
+ */
+function HospitalWeeklyTable({
+  specs,
+  cabinetName,
+  month,
+  year,
+  pageIndex,
+  startDay,
+  endDay,
+  temps,
+  highlightTemps,
+  dataMap,
+}) {
+  const days = endDay - startDay + 1;
+  const wrapRef = useRef(null);
+  const svgRef = useRef(null);
+  const polyRef = useRef(null);
+  const dataMapRef = useRef(dataMap);
+  dataMapRef.current = dataMap;
+  const tempsRef = useRef(temps);
+  tempsRef.current = temps;
+
+  const updatePoints = () => {
+    if (!wrapRef.current || !svgRef.current || !polyRef.current) return;
+    const wrap = wrapRef.current;
+    const wrapRect = wrap.getBoundingClientRect();
+    if (wrapRect.width === 0 || wrapRect.height === 0) return;
+
+    svgRef.current.setAttribute('viewBox', `0 0 ${wrapRect.width} ${wrapRect.height}`);
+
+    const curDataMap = dataMapRef.current || {};
+    const pts = [];
+
+    for (let d = startDay; d <= endDay; d++) {
+      for (let s = 1; s <= 6; s++) {
+        const entry = curDataMap[d]?.[s];
+        if (entry && entry.temp !== null && entry.temp !== undefined) {
+          const rawTemp = entry.temp;
+          const roundedTemp = Math.round(rawTemp);
+
+          const cell = wrap.querySelector(
+            `[data-cell="true"][data-day="${d}"][data-slot="${s}"][data-temp="${roundedTemp}"]`
+          );
+
+          if (cell) {
+            const cellRect = cell.getBoundingClientRect();
+            const x = cellRect.left - wrapRect.left + cellRect.width / 2;
+            let y = cellRect.top - wrapRect.top + cellRect.height / 2;
+
+            if (rawTemp !== roundedTemp) {
+              const floorT = Math.floor(rawTemp);
+              const ceilT = Math.ceil(rawTemp);
+              const cellF = wrap.querySelector(
+                `[data-cell="true"][data-day="${d}"][data-slot="${s}"][data-temp="${floorT}"]`
+              );
+              const cellC = wrap.querySelector(
+                `[data-cell="true"][data-day="${d}"][data-slot="${s}"][data-temp="${ceilT}"]`
+              );
+              if (cellF && cellC) {
+                const rF = cellF.getBoundingClientRect();
+                const rC = cellC.getBoundingClientRect();
+                const yF = rF.top - wrapRect.top + rF.height / 2;
+                const yC = rC.top - wrapRect.top + rC.height / 2;
+                y = yF + (rawTemp - floorT) * (yC - yF);
+              }
+            }
+
+            pts.push({ x, y, temp: rawTemp, day: d, slot: s });
+          }
+        }
+      }
+    }
+
+    if (pts.length >= 2) {
+      polyRef.current.setAttribute(
+        'points',
+        pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')
+      );
+      polyRef.current.style.display = '';
+    } else {
+      polyRef.current.setAttribute('points', '');
+      polyRef.current.style.display = 'none';
+    }
+  };
+
+  useEffect(() => {
+    updatePoints();
+    const timer = setTimeout(updatePoints, 150);
+    const ro = new ResizeObserver(() => updatePoints());
+    if (wrapRef.current) ro.observe(wrapRef.current);
+    const onResize = () => updatePoints();
+    const onBeforePrint = () => updatePoints();
+    window.addEventListener('resize', onResize);
+    window.addEventListener('beforeprint', onBeforePrint);
+    return () => {
+      clearTimeout(timer);
+      ro.disconnect();
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('beforeprint', onBeforePrint);
+    };
+  }, [dataMap, temps, startDay, endDay, cabinetName]);
+
+  const SLOTS_PER_DAY = 6;
+
+  return (
+    <div className="hospital-sheet-page mx-auto w-full max-w-[1140px] rounded-2xl border border-slate-300 bg-white p-4 shadow-md transition-all select-none text-slate-900">
+      {/* Hospital Header Top */}
+      <div className="flex items-start justify-between border-b border-slate-300 pb-2 text-[12px] leading-tight">
+        <div>
+          <div className="font-bold uppercase tracking-wider text-slate-900">
+            Bệnh viện Nhi Đồng 1
+          </div>
+          <div className="italic text-slate-600">Ban QLCLXN</div>
+          <div className="font-semibold text-slate-800">
+            Khoa Xét nghiệm Huyết học
+          </div>
+        </div>
+        <div className="text-right text-[11px] text-slate-600 max-w-[50%]">
+          <div>{specs.title}</div>
+        </div>
+      </div>
+
+      {/* Sheet Title */}
+      <div className="my-2 text-center">
+        <h1 className="text-base font-extrabold uppercase tracking-wide text-slate-900">
+          {specs.title}
+        </h1>
+        <div className="text-xs font-semibold text-slate-600">
+          (TRANG {pageIndex}: NGÀY {startDay} - {endDay})
+        </div>
+      </div>
+
+      {/* Metadata bar */}
+      <div className="mb-2 grid grid-cols-3 gap-2 rounded-lg border border-slate-200 bg-slate-50/60 p-2 text-[11px] leading-snug">
+        <div>
+          <div>
+            <span className="font-bold text-slate-700">Loại tủ: </span>
+            <span className="font-medium text-slate-900">{cabinetName}</span>
+          </div>
+          <div className="mt-0.5">
+            <span className="font-bold text-slate-700">Người quản lý: </span>
+            <span className="font-medium text-slate-900">
+              {specs.managerCode || 'LIB001'}
+            </span>
+          </div>
+        </div>
+        <div>
+          <div>
+            <span className="font-bold text-slate-700">Mã thiết bị: </span>
+            <span className="font-medium text-slate-900">
+              {specs.deviceCode || ''}
+            </span>
+          </div>
+          <div className="mt-0.5">
+            <span className="font-bold text-slate-700">Mã nhiệt kế: </span>
+            <span className="font-medium text-slate-900">
+              {specs.thermometerCode || ''}
+            </span>
+          </div>
+        </div>
+        <div className="text-right">
+          <div>
+            <span className="font-bold text-slate-700">Tiêu chuẩn: </span>
+            <span className="font-bold text-rose-600">
+              {specs.standardTemp || '2°C ~ 6°C'}
+            </span>
+          </div>
+          <div className="mt-0.5">
+            <span className="font-bold text-slate-700">Tháng: </span>
+            <span className="font-bold text-blue-900">{month}</span>
+            <span className="font-bold text-slate-700"> / Năm: </span>
+            <span className="font-bold text-blue-900">{year}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Grid with SVG Line & Dot overlay */}
+      <div
+        ref={wrapRef}
+        className="chart-wrap-container relative w-full overflow-x-auto border-2 border-slate-500 bg-white"
+      >
+        <svg
+          ref={svgRef}
+          className="absolute inset-0 pointer-events-none z-10 w-full h-full"
+          style={{ overflow: 'visible' }}
+        >
+          <polyline
+            ref={polyRef}
+            fill="none"
+            stroke="#dc2626"
+            strokeWidth="1.8"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+        </svg>
+
+        <table className="w-full border-collapse text-center table-fixed">
+          <thead>
+            {/* Header Row 1: Ngày */}
+            <tr className="border-b border-slate-400 bg-slate-100 text-[11px] font-bold text-slate-800">
+              <th
+                rowSpan={2}
+                className="w-[45px] border-r border-slate-400 py-1"
+              >
+                Ngày
+              </th>
+              {Array.from({ length: days }, (_, i) => (
+                <th
+                  key={startDay + i}
+                  colSpan={SLOTS_PER_DAY}
+                  className="border-r border-slate-400 py-1"
+                >
+                  {startDay + i}
+                </th>
+              ))}
+            </tr>
+
+            {/* Header Row 2: 1 2 3 4 5 6 for each day */}
+            <tr className="border-b border-slate-400 bg-slate-50 text-[10px] text-slate-700">
+              {Array.from({ length: days * SLOTS_PER_DAY }, (_, i) => {
+                const slotNum = (i % SLOTS_PER_DAY) + 1;
+                const isDayEnd = slotNum === SLOTS_PER_DAY;
+                return (
+                  <th
+                    key={i}
+                    className={`py-0.5 ${
+                      isDayEnd
+                        ? 'border-r border-slate-400'
+                        : 'border-r border-slate-200'
+                    }`}
+                  >
+                    {slotNum}
+                  </th>
+                );
+              })}
+            </tr>
+
+            {/* Header Row 3: T° */}
+            <tr className="border-b border-slate-400 bg-slate-50 text-[10px] font-semibold text-slate-600">
+              <th className="w-[45px] border-r border-slate-400 py-0.5">T°</th>
+              {Array.from({ length: days * SLOTS_PER_DAY }, (_, i) => {
+                const isDayEnd = (i % SLOTS_PER_DAY) + 1 === SLOTS_PER_DAY;
+                return (
+                  <th
+                    key={i}
+                    className={`py-0.5 ${
+                      isDayEnd
+                        ? 'border-r border-slate-400'
+                        : 'border-r border-slate-200'
+                    }`}
+                  />
+                );
+              })}
+            </tr>
+          </thead>
+
+          <tbody>
+            {temps.map((t, rowIdx) => {
+              const isBoundary =
+                highlightTemps && highlightTemps.includes(t);
+              const isSep = t === 'sep';
+
+              if (isSep) {
+                return (
+                  <tr key={`sep-${rowIdx}`} className="h-2 bg-slate-200">
+                    <td
+                      colSpan={1 + days * SLOTS_PER_DAY}
+                      className="border-b border-slate-300"
+                    />
+                  </tr>
+                );
+              }
+
+              return (
+                <tr
+                  key={t}
+                  className={`h-[22px] border-b ${
+                    isBoundary
+                      ? 'border-rose-300 bg-rose-50/25'
+                      : 'border-slate-200 hover:bg-slate-50/40'
+                  }`}
+                >
+                  {/* Temp label */}
+                  <td
+                    className={`w-[45px] border-r border-slate-400 font-bold text-[11px] ${
+                      isBoundary ? 'text-rose-600' : 'text-slate-800'
+                    }`}
+                  >
+                    {t}°C
+                  </td>
+
+                  {/* Day-slot cells */}
+                  {Array.from({ length: days }, (_, dayIdx) => {
+                    const d = startDay + dayIdx;
+                    return Array.from({ length: SLOTS_PER_DAY }, (_, sIdx) => {
+                      const s = sIdx + 1;
+                      const entry = dataMap[d]?.[s];
+                      const hasDot =
+                        entry &&
+                        entry.temp !== null &&
+                        entry.temp !== undefined &&
+                        Math.round(entry.temp) === t;
+                      const isDayEnd = s === SLOTS_PER_DAY;
+
+                      return (
+                        <td
+                          key={`${d}-${s}`}
+                          className={`relative p-0 text-center align-middle ${
+                            isDayEnd
+                              ? 'border-r border-slate-400'
+                              : 'border-r border-slate-200'
+                          }`}
+                          data-cell="true"
+                          data-day={d}
+                          data-slot={s}
+                          data-temp={t}
+                        >
+                          {hasDot && (
+                            <span
+                              className="sheet-dot"
+                              style={{
+                                display: 'block',
+                                width: '6.5px',
+                                height: '6.5px',
+                                borderRadius: '50%',
+                                backgroundColor: '#dc2626',
+                                margin: 'auto',
+                              }}
+                              title={`Ngày ${d} L${s}: ${entry.temp}°C`}
+                            />
+                          )}
+                        </td>
+                      );
+                    });
+                  })}
+                </tr>
+              );
+            })}
+
+            {/* Signature row: Tên */}
+            <tr className="h-16 border-t-2 border-slate-400 bg-white">
+              <td className="w-[45px] border-r border-slate-400 font-bold text-[11px] text-slate-700 align-middle">
+                Tên
+              </td>
+              {Array.from({ length: days }, (_, dayIdx) => {
+                const d = startDay + dayIdx;
+                return Array.from({ length: SLOTS_PER_DAY }, (_, sIdx) => {
+                  const s = sIdx + 1;
+                  const sign =
+                    dataMap[d]?.[s]?.sign ||
+                    dataMap[d]?.[s]?.id_nv ||
+                    '';
+                  const isDayEnd = s === SLOTS_PER_DAY;
+
+                  return (
+                    <td
+                      key={`${d}-${s}`}
+                      className={`p-0.5 align-middle overflow-hidden text-center ${
+                        isDayEnd
+                          ? 'border-r border-slate-400'
+                          : 'border-r border-slate-200'
+                      }`}
+                      title={sign ? `Ngày ${d} L${s}: ${sign}` : ''}
+                    >
+                      {sign && (
+                        <span
+                          className="inline-block text-[9.5px] font-bold text-blue-900 max-h-[58px] tracking-tight uppercase"
+                          style={{
+                            writingMode: 'vertical-rl',
+                            transform: 'rotate(180deg)',
+                          }}
+                        >
+                          {sign}
+                        </span>
+                      )}
+                    </td>
+                  );
+                });
+              })}
+            </tr>
+
+            {/* Trưởng bộ phận row */}
+            <tr className="h-8 border-t border-slate-400 bg-slate-50/50">
+              <td className="w-[45px] border-r border-slate-400 font-bold text-[10px] text-slate-800 align-middle">
+                Trưởng BP
+              </td>
+              <td
+                colSpan={days * SLOTS_PER_DAY}
+                className="text-center font-bold text-[11px] text-slate-800 align-middle"
+              >
+                {specs.managerCode || 'LIB001'}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* Footer note matching hospital template */}
+      <div className="mt-2 flex items-center justify-between text-[10.5px] text-slate-600">
+        <div className="font-medium italic">
+          * Lần 1-7:00, Lần 2-11:00, Lần 3-15:00, Lần 4-19:00, Lần 5-23:00, Lần 6-3:00
+        </div>
+        <div className="font-semibold text-slate-500">
+          {specs.code || 'FM-EQ-HE-003 V4.0'}
+        </div>
+      </div>
     </div>
   );
 }
@@ -705,20 +1576,28 @@ function HospitalHalfTable({
 }) {
   const days = endDay - startDay + 1;
   const wrapRef = useRef(null);
-  const [linePoints, setLinePoints] = useState([]);
+  const svgRef = useRef(null);
+  const polyRef = useRef(null);
+  const dataMapRef = useRef(dataMap);
+  dataMapRef.current = dataMap;
+  const tempsRef = useRef(temps);
+  tempsRef.current = temps;
 
   // Compute exact center of cells using DOM getBoundingClientRect
   const updatePoints = () => {
-    if (!wrapRef.current) return;
+    if (!wrapRef.current || !svgRef.current || !polyRef.current) return;
     const wrap = wrapRef.current;
     const wrapRect = wrap.getBoundingClientRect();
     if (wrapRect.width === 0 || wrapRect.height === 0) return;
 
+    svgRef.current.setAttribute('viewBox', `0 0 ${wrapRect.width} ${wrapRect.height}`);
+
+    const curDataMap = dataMapRef.current || {};
     const pts = [];
 
     for (let d = startDay; d <= endDay; d++) {
       ['S', 'C'].forEach((s) => {
-        const entry = dataMap[d]?.[s];
+        const entry = curDataMap[d]?.[s];
         if (entry && entry.temp !== null && entry.temp !== undefined) {
           const rawTemp = entry.temp;
           const roundedTemp = Math.round(rawTemp);
@@ -758,19 +1637,30 @@ function HospitalHalfTable({
       });
     }
 
-    setLinePoints(pts);
+    if (pts.length >= 2) {
+      const ptsStr = pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+      polyRef.current.setAttribute('points', ptsStr);
+      polyRef.current.style.display = 'inline';
+    } else {
+      polyRef.current.setAttribute('points', '');
+      polyRef.current.style.display = 'none';
+    }
   };
 
   useLayoutEffect(() => {
     updatePoints();
-    const raf = requestAnimationFrame(updatePoints);
-    return () => cancelAnimationFrame(raf);
-  }, [dataMap, temps, startDay, endDay]);
+    const raf1 = requestAnimationFrame(updatePoints);
+    const raf2 = requestAnimationFrame(() => requestAnimationFrame(updatePoints));
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
+  }, [dataMap, temps, startDay, endDay, cabinetName]);
 
   useEffect(() => {
     if (!wrapRef.current) return;
     const ro = new ResizeObserver(() => {
-      requestAnimationFrame(updatePoints);
+      updatePoints();
     });
     ro.observe(wrapRef.current);
     window.addEventListener('resize', updatePoints);
@@ -781,10 +1671,6 @@ function HospitalHalfTable({
       window.removeEventListener('beforeprint', updatePoints);
     };
   }, []);
-
-  const svgPolylinePoints = linePoints
-    .map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`)
-    .join(' ');
 
   return (
     <div className="hospital-sheet-page mx-auto w-full max-w-[1140px] rounded-2xl border border-slate-300 bg-white p-4 shadow-md transition-all select-none text-slate-900">
@@ -861,36 +1747,26 @@ function HospitalHalfTable({
       {/* Chart Wrap Container: Holds Table and Absolute SVG Overlay */}
       <div
         ref={wrapRef}
-        className="relative border border-slate-400 rounded-lg overflow-hidden bg-white"
+        className="chart-wrap-container relative border border-slate-400 rounded-lg overflow-hidden bg-white"
         style={{ position: 'relative' }}
       >
         {/* SVG Polyline Overlay connecting centers of cells */}
         <svg
+          ref={svgRef}
           className="pointer-events-none absolute inset-0 z-10 h-full w-full"
+          preserveAspectRatio="none"
           style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
         >
-          {svgPolylinePoints && (
-            <polyline
-              points={svgPolylinePoints}
-              fill="none"
-              stroke="#dc2626"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          )}
-          {linePoints.map((p, idx) => (
-            <g key={idx}>
-              <circle
-                cx={p.x}
-                cy={p.y}
-                r="3.8"
-                fill="#dc2626"
-                stroke="#ffffff"
-                strokeWidth="1.5"
-              />
-            </g>
-          ))}
+          <polyline
+            ref={polyRef}
+            points=""
+            fill="none"
+            stroke="#dc2626"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ display: 'none' }}
+          />
         </svg>
 
         {/* HTML Table Grid */}
@@ -960,26 +1836,68 @@ function HospitalHalfTable({
                     {t}°C
                   </td>
 
-                  {/* Day session cells */}
+                  {/* Day session cells with native centered dots */}
                   {Array.from({ length: days }, (_, dayIdx) => {
                     const d = startDay + dayIdx;
+                    const entryS = dataMap[d]?.S;
+                    const entryC = dataMap[d]?.C;
+                    const hasDotS =
+                      entryS &&
+                      entryS.temp !== null &&
+                      entryS.temp !== undefined &&
+                      Math.round(entryS.temp) === t;
+                    const hasDotC =
+                      entryC &&
+                      entryC.temp !== null &&
+                      entryC.temp !== undefined &&
+                      Math.round(entryC.temp) === t;
 
                     return (
                       <React.Fragment key={d}>
                         <td
-                          className="relative border-r border-slate-200 p-0 text-center"
+                          className="relative border-r border-slate-200 p-0 text-center align-middle"
                           data-cell="true"
                           data-day={d}
                           data-session="S"
                           data-temp={t}
-                        />
+                        >
+                          {hasDotS && (
+                            <span
+                              className="sheet-dot"
+                              style={{
+                                display: 'block',
+                                width: '7.5px',
+                                height: '7.5px',
+                                borderRadius: '50%',
+                                backgroundColor: '#dc2626',
+                                margin: 'auto',
+                              }}
+                              title={`Ngày ${d} S: ${entryS.temp}°C`}
+                            />
+                          )}
+                        </td>
                         <td
-                          className="relative border-r border-slate-300 p-0 text-center"
+                          className="relative border-r border-slate-300 p-0 text-center align-middle"
                           data-cell="true"
                           data-day={d}
                           data-session="C"
                           data-temp={t}
-                        />
+                        >
+                          {hasDotC && (
+                            <span
+                              className="sheet-dot"
+                              style={{
+                                display: 'block',
+                                width: '7.5px',
+                                height: '7.5px',
+                                borderRadius: '50%',
+                                backgroundColor: '#dc2626',
+                                margin: 'auto',
+                              }}
+                              title={`Ngày ${d} C: ${entryC.temp}°C`}
+                            />
+                          )}
+                        </td>
                       </React.Fragment>
                     );
                   })}
@@ -987,25 +1905,27 @@ function HospitalHalfTable({
               );
             })}
 
-            {/* Signature Row: Staff full names */}
+            {/* Signature Row: Staff ID */}
             <tr className="h-16 border-t-2 border-slate-400 bg-white">
               <td className="w-[60px] border-r border-slate-400 font-bold text-[11px] text-slate-700 align-middle">
                 Tên
               </td>
               {Array.from({ length: days }, (_, dayIdx) => {
                 const d = startDay + dayIdx;
-                const signS = dataMap[d]?.S?.sign || '';
-                const signC = dataMap[d]?.C?.sign || '';
+                const signS = dataMap[d]?.S?.sign || dataMap[d]?.S?.id_nv || '';
+                const signC = dataMap[d]?.C?.sign || dataMap[d]?.C?.id_nv || '';
+                const nameS = dataMap[d]?.S?.staffName || '';
+                const nameC = dataMap[d]?.C?.staffName || '';
 
                 return (
                   <React.Fragment key={d}>
                     <td
                       className="border-r border-slate-200 p-0.5 align-middle overflow-hidden text-center"
-                      title={signS ? `Ngày ${d} S: ${signS}` : ''}
+                      title={signS ? `Ngày ${d} S: ${signS}${nameS && nameS !== signS ? ` (${nameS})` : ''}` : ''}
                     >
                       {signS && (
                         <span
-                          className="inline-block text-[9px] font-bold text-blue-900 max-h-[58px] truncate"
+                          className="inline-block text-[10px] font-bold text-blue-900 max-h-[58px] tracking-tight uppercase"
                           style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
                         >
                           {signS}
@@ -1014,11 +1934,11 @@ function HospitalHalfTable({
                     </td>
                     <td
                       className="border-r border-slate-300 p-0.5 align-middle overflow-hidden text-center"
-                      title={signC ? `Ngày ${d} C: ${signC}` : ''}
+                      title={signC ? `Ngày ${d} C: ${signC}${nameC && nameC !== signC ? ` (${nameC})` : ''}` : ''}
                     >
                       {signC && (
                         <span
-                          className="inline-block text-[9px] font-bold text-amber-900 max-h-[58px] truncate"
+                          className="inline-block text-[10px] font-bold text-amber-900 max-h-[58px] tracking-tight uppercase"
                           style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
                         >
                           {signC}
@@ -1058,8 +1978,12 @@ function HospitalHalfTable({
  */
 function HospitalRoomSheet({ specs, cabinetName, month, year, dataMap }) {
   const wrapRef = useRef(null);
-  const [tempPoints, setTempPoints] = useState([]);
-  const [humPoints, setHumPoints] = useState([]);
+  const svgRef = useRef(null);
+  const tempPolyRef = useRef(null);
+  const humPolyRef = useRef(null);
+
+  const dataMapRef = useRef(dataMap);
+  dataMapRef.current = dataMap;
 
   const tempScale = specs.tempScale || [
     32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15,
@@ -1067,20 +1991,28 @@ function HospitalRoomSheet({ specs, cabinetName, month, year, dataMap }) {
   const humScale = specs.humScale || [
     100, 95, 90, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30, 25, 20, 15,
   ];
+  const tempScaleRef = useRef(tempScale);
+  tempScaleRef.current = tempScale;
+  const humScaleRef = useRef(humScale);
+  humScaleRef.current = humScale;
 
   // Measure exact pixel coordinates for temperature and humidity points
   const updateRoomPoints = () => {
-    if (!wrapRef.current) return;
+    if (!wrapRef.current || !svgRef.current || !tempPolyRef.current || !humPolyRef.current) return;
     const wrap = wrapRef.current;
     const wrapRect = wrap.getBoundingClientRect();
     if (wrapRect.width === 0 || wrapRect.height === 0) return;
 
+    svgRef.current.setAttribute('viewBox', `0 0 ${wrapRect.width} ${wrapRect.height}`);
+
+    const curDataMap = dataMapRef.current || {};
+    const curHumScale = humScaleRef.current;
     const tPts = [];
     const hPts = [];
 
     for (let d = 1; d <= 31; d++) {
       ['S', 'C'].forEach((s) => {
-        const entry = dataMap[d]?.[s];
+        const entry = curDataMap[d]?.[s];
         if (!entry) return;
 
         // Temperature point (Blue)
@@ -1094,9 +2026,6 @@ function HospitalRoomSheet({ specs, cabinetName, month, year, dataMap }) {
             tPts.push({
               x: cellRect.left - wrapRect.left + cellRect.width / 2,
               y: cellRect.top - wrapRect.top + cellRect.height / 2,
-              temp: entry.temp,
-              day: d,
-              session: s,
             });
           }
         }
@@ -1105,7 +2034,7 @@ function HospitalRoomSheet({ specs, cabinetName, month, year, dataMap }) {
         if (entry.hum !== null && entry.hum !== undefined) {
           const roundedH = Math.round(entry.hum);
           // Find closest row in humScale
-          const hRowIdx = Math.max(0, Math.min(humScale.length - 1, Math.round((100 - roundedH) / 5)));
+          const hRowIdx = Math.max(0, Math.min(curHumScale.length - 1, Math.round((100 - roundedH) / 5)));
           const cell = wrap.querySelector(
             `[data-cell="true"][data-day="${d}"][data-session="${s}"][data-hum-idx="${hRowIdx}"]`
           );
@@ -1114,29 +2043,45 @@ function HospitalRoomSheet({ specs, cabinetName, month, year, dataMap }) {
             hPts.push({
               x: cellRect.left - wrapRect.left + cellRect.width / 2,
               y: cellRect.top - wrapRect.top + cellRect.height / 2,
-              hum: entry.hum,
-              day: d,
-              session: s,
             });
           }
         }
       });
     }
 
-    setTempPoints(tPts);
-    setHumPoints(hPts);
+    if (tPts.length >= 2) {
+      const tStr = tPts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+      tempPolyRef.current.setAttribute('points', tStr);
+      tempPolyRef.current.style.display = 'inline';
+    } else {
+      tempPolyRef.current.setAttribute('points', '');
+      tempPolyRef.current.style.display = 'none';
+    }
+
+    if (hPts.length >= 2) {
+      const hStr = hPts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+      humPolyRef.current.setAttribute('points', hStr);
+      humPolyRef.current.style.display = 'inline';
+    } else {
+      humPolyRef.current.setAttribute('points', '');
+      humPolyRef.current.style.display = 'none';
+    }
   };
 
   useLayoutEffect(() => {
     updateRoomPoints();
-    const raf = requestAnimationFrame(updateRoomPoints);
-    return () => cancelAnimationFrame(raf);
-  }, [dataMap, tempScale, humScale]);
+    const raf1 = requestAnimationFrame(updateRoomPoints);
+    const raf2 = requestAnimationFrame(() => requestAnimationFrame(updateRoomPoints));
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
+  }, [dataMap, tempScale, humScale, cabinetName]);
 
   useEffect(() => {
     if (!wrapRef.current) return;
     const ro = new ResizeObserver(() => {
-      requestAnimationFrame(updateRoomPoints);
+      updateRoomPoints();
     });
     ro.observe(wrapRef.current);
     window.addEventListener('resize', updateRoomPoints);
@@ -1147,9 +2092,6 @@ function HospitalRoomSheet({ specs, cabinetName, month, year, dataMap }) {
       window.removeEventListener('beforeprint', updateRoomPoints);
     };
   }, []);
-
-  const tempPolylinePoints = tempPoints.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
-  const humPolylinePoints = humPoints.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
 
   return (
     <div className="hospital-sheet-page mx-auto w-full max-w-[1200px] rounded-2xl border border-slate-300 bg-white p-4 shadow-md transition-all select-none text-slate-900">
@@ -1197,43 +2139,39 @@ function HospitalRoomSheet({ specs, cabinetName, month, year, dataMap }) {
       {/* Chart Wrap Container: Holds Table and Dual SVG Overlay */}
       <div
         ref={wrapRef}
-        className="relative border border-slate-400 rounded-lg overflow-hidden bg-white"
+        className="chart-wrap-container relative border border-slate-400 rounded-lg overflow-hidden bg-white"
         style={{ position: 'relative' }}
       >
         {/* SVG Overlay for Dual Lines */}
         <svg
+          ref={svgRef}
           className="pointer-events-none absolute inset-0 z-10 h-full w-full"
+          preserveAspectRatio="none"
           style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
         >
           {/* Blue line: Temperature */}
-          {tempPolylinePoints && (
-            <polyline
-              points={tempPolylinePoints}
-              fill="none"
-              stroke="#0056b3"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          )}
-          {tempPoints.map((p, idx) => (
-            <circle key={`t-${idx}`} cx={p.x} cy={p.y} r="3.5" fill="#0056b3" stroke="#ffffff" strokeWidth="1" />
-          ))}
+          <polyline
+            ref={tempPolyRef}
+            points=""
+            fill="none"
+            stroke="#0056b3"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ display: 'none' }}
+          />
 
           {/* Red line: Humidity */}
-          {humPolylinePoints && (
-            <polyline
-              points={humPolylinePoints}
-              fill="none"
-              stroke="#d32f2f"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          )}
-          {humPoints.map((p, idx) => (
-            <circle key={`h-${idx}`} cx={p.x} cy={p.y} r="3.5" fill="#d32f2f" stroke="#ffffff" strokeWidth="1" />
-          ))}
+          <polyline
+            ref={humPolyRef}
+            points=""
+            fill="none"
+            stroke="#d32f2f"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ display: 'none' }}
+          />
         </svg>
 
         {/* HTML Table Grid */}
@@ -1292,28 +2230,162 @@ function HospitalRoomSheet({ specs, cabinetName, month, year, dataMap }) {
                     {h}
                   </td>
 
-                  {/* Day session cells */}
+                  {/* Day session cells with native centered dots */}
                   {Array.from({ length: 31 }, (_, dayIdx) => {
                     const d = dayIdx + 1;
+                    const entryS = dataMap[d]?.S;
+                    const entryC = dataMap[d]?.C;
+                    const hasTempS =
+                      entryS &&
+                      entryS.temp !== null &&
+                      entryS.temp !== undefined &&
+                      Math.round(entryS.temp) === t;
+                    const hasTempC =
+                      entryC &&
+                      entryC.temp !== null &&
+                      entryC.temp !== undefined &&
+                      Math.round(entryC.temp) === t;
+                    const hasHumS =
+                      entryS &&
+                      entryS.hum !== null &&
+                      entryS.hum !== undefined &&
+                      Math.max(
+                        0,
+                        Math.min(humScale.length - 1, Math.round((100 - Math.round(entryS.hum)) / 5))
+                      ) === rowIdx;
+                    const hasHumC =
+                      entryC &&
+                      entryC.hum !== null &&
+                      entryC.hum !== undefined &&
+                      Math.max(
+                        0,
+                        Math.min(humScale.length - 1, Math.round((100 - Math.round(entryC.hum)) / 5))
+                      ) === rowIdx;
 
                     return (
                       <React.Fragment key={d}>
                         <td
-                          className="relative border-r border-slate-100 p-0 text-center"
+                          className="relative border-r border-slate-100 p-0 text-center align-middle"
                           data-cell="true"
                           data-day={d}
                           data-session="S"
                           data-temp-val={t}
                           data-hum-idx={rowIdx}
-                        />
+                        >
+                          {hasTempS && !hasHumS && (
+                            <span
+                              className="sheet-dot inline-block rounded-full bg-blue-700"
+                              style={{
+                                width: '6.5px',
+                                height: '6.5px',
+                                backgroundColor: '#0056b3',
+                                borderRadius: '50%',
+                                display: 'block',
+                                margin: 'auto',
+                              }}
+                              title={`Ngày ${d} S: ${entryS.temp}°C`}
+                            />
+                          )}
+                          {hasHumS && !hasTempS && (
+                            <span
+                              className="sheet-dot inline-block rounded-full bg-rose-600"
+                              style={{
+                                width: '6.5px',
+                                height: '6.5px',
+                                backgroundColor: '#d32f2f',
+                                borderRadius: '50%',
+                                display: 'block',
+                                margin: 'auto',
+                              }}
+                              title={`Ngày ${d} S: ${entryS.hum}%`}
+                            />
+                          )}
+                          {hasTempS && hasHumS && (
+                            <div className="flex items-center justify-center gap-0.5">
+                              <span
+                                className="sheet-dot"
+                                style={{
+                                  width: '5.5px',
+                                  height: '5.5px',
+                                  backgroundColor: '#0056b3',
+                                  borderRadius: '50%',
+                                  display: 'inline-block',
+                                }}
+                              />
+                              <span
+                                className="sheet-dot"
+                                style={{
+                                  width: '5.5px',
+                                  height: '5.5px',
+                                  backgroundColor: '#d32f2f',
+                                  borderRadius: '50%',
+                                  display: 'inline-block',
+                                }}
+                              />
+                            </div>
+                          )}
+                        </td>
                         <td
-                          className="relative border-r border-slate-300 p-0 text-center"
+                          className="relative border-r border-slate-300 p-0 text-center align-middle"
                           data-cell="true"
                           data-day={d}
                           data-session="C"
                           data-temp-val={t}
                           data-hum-idx={rowIdx}
-                        />
+                        >
+                          {hasTempC && !hasHumC && (
+                            <span
+                              className="sheet-dot inline-block rounded-full bg-blue-700"
+                              style={{
+                                width: '6.5px',
+                                height: '6.5px',
+                                backgroundColor: '#0056b3',
+                                borderRadius: '50%',
+                                display: 'block',
+                                margin: 'auto',
+                              }}
+                              title={`Ngày ${d} C: ${entryC.temp}°C`}
+                            />
+                          )}
+                          {hasHumC && !hasTempC && (
+                            <span
+                              className="sheet-dot inline-block rounded-full bg-rose-600"
+                              style={{
+                                width: '6.5px',
+                                height: '6.5px',
+                                backgroundColor: '#d32f2f',
+                                borderRadius: '50%',
+                                display: 'block',
+                                margin: 'auto',
+                              }}
+                              title={`Ngày ${d} C: ${entryC.hum}%`}
+                            />
+                          )}
+                          {hasTempC && hasHumC && (
+                            <div className="flex items-center justify-center gap-0.5">
+                              <span
+                                className="sheet-dot"
+                                style={{
+                                  width: '5.5px',
+                                  height: '5.5px',
+                                  backgroundColor: '#0056b3',
+                                  borderRadius: '50%',
+                                  display: 'inline-block',
+                                }}
+                              />
+                              <span
+                                className="sheet-dot"
+                                style={{
+                                  width: '5.5px',
+                                  height: '5.5px',
+                                  backgroundColor: '#d32f2f',
+                                  borderRadius: '50%',
+                                  display: 'inline-block',
+                                }}
+                              />
+                            </div>
+                          )}
+                        </td>
                       </React.Fragment>
                     );
                   })}
@@ -1321,32 +2393,40 @@ function HospitalRoomSheet({ specs, cabinetName, month, year, dataMap }) {
               );
             })}
 
-            {/* Signature Row: Staff full names */}
+            {/* Signature Row: Staff ID */}
             <tr className="h-16 border-t-2 border-slate-400 bg-white">
               <td colSpan={2} className="w-[72px] border-r border-slate-400 font-bold text-[10px] text-slate-700 align-middle">
                 Người ghi
               </td>
               {Array.from({ length: 31 }, (_, dayIdx) => {
                 const d = dayIdx + 1;
-                const signS = dataMap[d]?.S?.sign || '';
-                const signC = dataMap[d]?.C?.sign || '';
+                const signS = dataMap[d]?.S?.sign || dataMap[d]?.S?.id_nv || '';
+                const signC = dataMap[d]?.C?.sign || dataMap[d]?.C?.id_nv || '';
+                const nameS = dataMap[d]?.S?.staffName || '';
+                const nameC = dataMap[d]?.C?.staffName || '';
 
                 return (
                   <React.Fragment key={d}>
-                    <td className="border-r border-slate-200 p-0.5 align-middle overflow-hidden text-center">
+                    <td
+                      className="border-r border-slate-200 p-0.5 align-middle overflow-hidden text-center"
+                      title={signS ? `Ngày ${d} S: ${signS}${nameS && nameS !== signS ? ` (${nameS})` : ''}` : ''}
+                    >
                       {signS && (
                         <span
-                          className="inline-block text-[9px] font-bold text-blue-900 max-h-[58px] truncate"
+                          className="inline-block text-[10px] font-bold text-blue-900 max-h-[58px] tracking-tight uppercase"
                           style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
                         >
                           {signS}
                         </span>
                       )}
                     </td>
-                    <td className="border-r border-slate-300 p-0.5 align-middle overflow-hidden text-center">
+                    <td
+                      className="border-r border-slate-300 p-0.5 align-middle overflow-hidden text-center"
+                      title={signC ? `Ngày ${d} C: ${signC}${nameC && nameC !== signC ? ` (${nameC})` : ''}` : ''}
+                    >
                       {signC && (
                         <span
-                          className="inline-block text-[9px] font-bold text-amber-900 max-h-[58px] truncate"
+                          className="inline-block text-[10px] font-bold text-amber-900 max-h-[58px] tracking-tight uppercase"
                           style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
                         >
                           {signC}
@@ -1502,7 +2582,7 @@ function HospitalMaintenanceSheet({ specs, cabinetName, month, year, operators =
                 >
                   {op && (
                     <span
-                      className="inline-block text-[8.5px] font-bold text-black tracking-tighter"
+                      className="inline-block text-[9px] font-bold text-black tracking-tight uppercase"
                       style={{
                         writingMode: 'vertical-rl',
                         transform: 'rotate(180deg)',

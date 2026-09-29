@@ -149,7 +149,7 @@ export async function fetchCabinets() {
  */
 export async function fetchDataRows() {
   const token = await getAccessToken();
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.spreadsheetId}/values/DATA!A1:Z2000`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.spreadsheetId}/values/DATA!A:Z`;
 
   const resp = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
